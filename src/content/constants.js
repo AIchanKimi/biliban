@@ -55,6 +55,7 @@ export const BUTTON_CLICKED_CLASS = 'block_obj_button_clicked';
 export const TAB_BAR_CLASS = 'block_obj_tab_bar';
 export const TAB_CLASS = 'block_obj_tab';
 export const TAB_ACTIVE_CLASS = 'block_obj_tab block_obj_tab_active';
+export const TAB_CURRENT_CLASS = 'block_obj_tab_current'; // 当前页面所属分类（含全局）
 export const SCOPE_PANE_CLASS = 'block_obj_scope_pane';
 export const SELECT_CLASS = 'block_obj_select';
 export const NUMBER_INPUT_CLASS = 'block_obj_input block_obj_number_input';

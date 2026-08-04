@@ -50,6 +50,10 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await expect(page.locator('#bilibiliConfig_tab_global')).toHaveClass(/block_obj_tab_active/);
     await expect(page.locator('#bilibiliConfig_pane_global')).toBeVisible();
     await expect(page.locator('#bilibiliConfig_pane_search')).not.toBeVisible();
+    // 当前页面（www fixture → home）：全局 + 首页 带「当前页面」标记，其余不带
+    await expect(page.locator('#bilibiliConfig_tab_global')).toHaveClass(/block_obj_tab_current/);
+    await expect(page.locator('#bilibiliConfig_tab_home')).toHaveClass(/block_obj_tab_current/);
+    await expect(page.locator('#bilibiliConfig_tab_search')).not.toHaveClass(/block_obj_tab_current/);
     await page.close();
   });
 

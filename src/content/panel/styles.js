@@ -201,6 +201,9 @@ export const LIB_STYLE = `
     border-color: #00A1D6;
     color: #FFF;
   }
+  .block_obj_tab_current {
+    box-shadow: inset 0 -3px 0 #41B349;
+  }
   .block_obj_scope_pane {
     border: 1px dotted #444;
     border-radius: 3px;

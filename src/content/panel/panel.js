@@ -28,7 +28,8 @@ import { CONFIG_VERSION } from '../config/defaults.js';
 import { SCOPES } from '../config/scopes.js';
 import { getTempEntries, setTempEntries, removeTempEntriesByScope } from '../config/temp-store.js';
 import { getRuleStats } from '../engine/rule-stats.js';
-import { RULE_STATS_CLASS, RULE_STATS_HIT_CLASS } from '../constants.js';
+import { categoryFor } from '../engine/category.js';
+import { RULE_STATS_CLASS, RULE_STATS_HIT_CLASS, TAB_CURRENT_CLASS } from '../constants.js';
 import { createGeneralSection } from './sections/general.js';
 import { createScopePane } from './sections/scope-pane.js';
 import { SAVE_FLASH_TEXT } from './panel-text.js';
@@ -94,12 +95,17 @@ export function createPanel(deps) {
     const tabBarLi = document.createElement('li');
     const tabBar = document.createElement('div');
     tabBar.className = TAB_BAR_CLASS;
+    // 当前页面匹配的分类：全局处处生效恒匹配，另加页面自身分类（动态等 other 页面仅全局）
+    const pageCategory = categoryFor(location.href);
+    const currentScopes = new Set(pageCategory ? ['global', pageCategory] : []);
     tabButtons = SCOPES.map(scope => {
       const tab = document.createElement('span');
       tab.id = FIELD_ID_PREFIX + 'tab_' + scope.value;
       tab.textContent = scope.label;
-      tab.title = '管理「' + scope.label + '」分类下的屏蔽内容';
-      tab.className = scope.value === activeScope ? TAB_ACTIVE_CLASS : TAB_CLASS;
+      tab.title = currentScopes.has(scope.value)
+        ? '当前页面生效的分类'
+        : '管理「' + scope.label + '」分类下的屏蔽内容';
+      tab.className = tabClassName(scope.value, scope.value === activeScope, currentScopes.has(scope.value));
       tab.addEventListener('click', () => switchTab(scope.value));
       tabBar.appendChild(tab);
       return { scope: scope.value, tab };
@@ -161,10 +167,18 @@ export function createPanel(deps) {
     document.body.appendChild(wrapDiv);
   }
 
+  /** tab 类名：选中态与「当前页面」标记可叠加 */
+  function tabClassName(scopeValue, isActive, isCurrent) {
+    const base = isActive ? TAB_ACTIVE_CLASS : TAB_CLASS;
+    return isCurrent ? base + ' ' + TAB_CURRENT_CLASS : base;
+  }
+
   function switchTab(scope) {
     activeScope = scope;
+    const pageCategory = categoryFor(location.href);
+    const currentScopes = new Set(pageCategory ? ['global', pageCategory] : []);
     for (const { scope: s, tab } of tabButtons) {
-      tab.className = s === scope ? TAB_ACTIVE_CLASS : TAB_CLASS;
+      tab.className = tabClassName(s, s === scope, currentScopes.has(s));
     }
     for (const { scope: s, pane } of panes) {
       pane.el.style.display = s === scope ? '' : 'none';
