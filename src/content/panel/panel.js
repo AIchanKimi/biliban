@@ -1,10 +1,10 @@
 // 设置面板主体（v5.1 标签页式管理，v6.3 shadcn 风格白底重绘）。保留壳行为：
 //   - 520px 固定面板，bottom 6vh，right 0↔-530px 滑入滑出
-//   - 底部按钮：保存并关闭 / 仅保存（闪「已保存」1s）/ 取消（收起后 800ms 按上次已保存重建）
-//     / 导出设置 / 导入设置
-//   - rebuild 用于「取消」与多标签页远端同步
-// 结构：通用（总开关）→ 分类标签栏（全局/搜索/空间/播放/收藏）
-//       → 每个分类一个面板页：屏蔽词组 + 时长组 + 规则组（默认折叠）+ 清空临时词。
+//   - 底部单行页脚：左 总开关 toggle/导出/导入，右 保存（闪「已保存」1s）/关闭
+//     （关闭收起后 800ms 按上次已保存重建，丢弃未保存编辑）
+//   - rebuild 用于「关闭」与多标签页远端同步
+// 结构：分类标签栏（全局/搜索/空间/播放/收藏）
+//       → 每个分类一个面板页：屏蔽词组 + 时长组 + 规则组（默认折叠）。
 // 收集语义：临时词条回写 temp-store（不落盘），持久词条进存储对象。
 import {
   BLOCK_OBJ_ID,
@@ -26,15 +26,13 @@ import {
 } from '../constants.js';
 import { CONFIG_VERSION, CONFIG_KEY } from '../config/defaults.js';
 import { SCOPES } from '../config/scopes.js';
-import { getTempEntries, setTempEntries, removeTempEntriesByScope } from '../config/temp-store.js';
+import { getTempEntries, setTempEntries } from '../config/temp-store.js';
 import { normalize } from '../config/store.js';
 import { getRuleStats } from '../engine/rule-stats.js';
 import { categoryFor } from '../engine/category.js';
-import { LIST_TEXTAREA_DIV_CLASS, RULE_STATS_CLASS, RULE_STATS_HIT_CLASS, TAB_CURRENT_CLASS } from '../constants.js';
+import { RULE_STATS_CLASS, RULE_STATS_HIT_CLASS, TAB_CURRENT_CLASS } from '../constants.js';
 import { createGeneralSection } from './sections/general.js';
 import { createScopePane } from './sections/scope-pane.js';
-import { removeTempChips } from './chips.js';
-import { buttonClicked } from './input-row.js';
 import { SAVE_FLASH_TEXT } from './panel-text.js';
 
 const STATS_REFRESH_MS = 1000;
@@ -44,18 +42,16 @@ const STATS_REFRESH_MS = 1000;
  *   initialConfig: Readonly<Record<string, unknown>>, // 存储形状 v2
  *   persist: (storageObject: Record<string, unknown>) => Promise<void>,
  *   onSaved: (storageObject: Readonly<Record<string, unknown>>) => void,
- *   onTempCleared: () => void, // 「清空临时词」后立即重跑屏蔽
  * }} deps
  */
 export function createPanel(deps) {
-  const { initialConfig, persist, onSaved, onTempCleared } = deps;
+  const { initialConfig, persist, onSaved } = deps;
   let config = { ...initialConfig };
   let wrapDiv = null;
   let ulNode = null;
   let generalSection = null;
   let panes = [];
   let tabButtons = [];
-  let clearTempBtnRef = null;
   let activeScope = 'global';
   let saveTimer = null;
   let cancelTimer = null;
@@ -68,7 +64,7 @@ export function createPanel(deps) {
   const entriesByScope = (list, scope) => (list ?? []).filter(entry => entry.scopes.includes(scope));
   let statsTimer = null;
 
-  /** 隐藏的文件选择框（导入设置） */
+  /** 隐藏的文件选择框（导入） */
   function createImportFileInput() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -99,11 +95,8 @@ export function createPanel(deps) {
     ulNode.className = UL_NODE_CLASS;
     mainFieldset.appendChild(ulNode);
 
-    // ---- 通用 ----
+    // ---- 通用（v6.6：总开关 toggle 移入页脚左侧，顶部不再占行）----
     generalSection = createGeneralSection(config);
-    for (const li of generalSection.lis) {
-      ulNode.appendChild(li);
-    }
 
     // ---- 分类标签栏 ----
     const tabBarLi = document.createElement('li');
@@ -142,29 +135,25 @@ export function createPanel(deps) {
       return { scope, pane };
     });
 
-    // ---- 底部单行页脚（v6.4）：左 导出/导入/清空临时词，右 取消/仅保存/保存并关闭 ----
-    const saveButton = createFooterBtn(SAVE_BUTTON_CLASS, '保存并关闭', '保存设置并关闭设置窗口', () => {
-      toggle();
-      save(saveButton);
-    });
-    const onlySaveButton = createFooterBtn(SAVE_BUTTON_CLASS, '仅保存', '仅保存设置', () => {
-      onlySaveButton.textContent = SAVE_FLASH_TEXT;
+    // ---- 底部单行页脚（v6.6）：左 总开关 toggle/导出/导入，右 保存/关闭 ----
+    const saveButton = createFooterBtn(SAVE_BUTTON_CLASS, '保存', '保存设置', () => {
+      saveButton.textContent = SAVE_FLASH_TEXT;
       if (saveTimer) {
         window.clearTimeout(saveTimer);
       }
       saveTimer = window.setTimeout(() => {
-        onlySaveButton.textContent = '仅保存';
+        saveButton.textContent = '保存';
         saveTimer = null;
       }, SAVE_FLASH_MS);
-      save(onlySaveButton);
+      save(saveButton);
     });
-    const exportButton = createFooterBtn(TOOLS_BUTTON_CLASS, '导出设置', '下载全部设置为 JSON 文件（含全部规则）', () => {
+    const exportButton = createFooterBtn(TOOLS_BUTTON_CLASS, '导出', '下载全部设置为 JSON 文件（含全部规则）', () => {
       exportSettings();
     });
-    const importButton = createFooterBtn(TOOLS_BUTTON_CLASS, '导入设置', '从 JSON 文件导入全部设置', () => {
+    const importButton = createFooterBtn(TOOLS_BUTTON_CLASS, '导入', '从 JSON 文件导入全部设置', () => {
       importFileInput.click();
     });
-    const cancelButton = createFooterBtn(CANCEL_BUTTON_CLASS, '取消', '关闭设置窗口（丢弃未保存编辑）', e => {
+    const closeButton = createFooterBtn(CANCEL_BUTTON_CLASS, '关闭', '关闭设置窗口（丢弃未保存编辑）', e => {
       toggle();
       if (cancelTimer) {
         window.clearTimeout(cancelTimer);
@@ -176,45 +165,23 @@ export function createPanel(deps) {
       }, CANCEL_REBUILD_MS);
       e.stopPropagation();
     });
-    const clearTempButton = createFooterBtn(TOOLS_BUTTON_CLASS, '清空临时词', '', () => {
-      const paneEl = panes.find(p => p.scope === activeScope)?.pane.el;
-      for (const listEl of paneEl?.querySelectorAll('.' + LIST_TEXTAREA_DIV_CLASS) ?? []) {
-        removeTempChips(listEl);
-      }
-      removeTempEntriesByScope(activeScope);
-      onTempCleared();
-      buttonClicked(clearTempButton, '已清空');
-    });
 
     const footerLi = document.createElement('li');
     footerLi.className = 'block_obj_footer_row';
     const secondary = document.createElement('span');
     secondary.className = 'block_obj_footer_secondary';
+    secondary.appendChild(generalSection.el);
     secondary.appendChild(exportButton);
     secondary.appendChild(importButton);
-    secondary.appendChild(clearTempButton);
     secondary.appendChild(importFileInput);
     const primary = document.createElement('span');
     primary.className = 'block_obj_footer_primary';
-    primary.appendChild(cancelButton);
-    primary.appendChild(onlySaveButton);
     primary.appendChild(saveButton);
+    primary.appendChild(closeButton);
     footerLi.appendChild(secondary);
     footerLi.appendChild(primary);
     ulNode.appendChild(footerLi);
-
-    clearTempBtnRef = clearTempButton;
-    updateClearTempTitle();
     document.body.appendChild(wrapDiv);
-  }
-
-  /** 「清空临时词」作用于当前分类，title 随标签切换更新 */
-  function updateClearTempTitle() {
-    if (!clearTempBtnRef) {
-      return;
-    }
-    const label = SCOPES.find(s => s.value === activeScope)?.label ?? activeScope;
-    clearTempBtnRef.title = '立即清空「' + label + '」分类下的全部临时词条';
   }
 
   /** 全量导出为 JSON 文件下载（v6.1 起规则已含全部内置项，config 即全量） */
@@ -264,7 +231,6 @@ export function createPanel(deps) {
     for (const { scope: s, pane } of panes) {
       pane.el.style.display = s === scope ? '' : 'none';
     }
-    updateClearTempTitle();
   }
 
   function createFooterBtn(classname, label, title, callback) {

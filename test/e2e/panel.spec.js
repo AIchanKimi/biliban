@@ -60,7 +60,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
-  test('切到「搜索」添加关键字 → 仅保存：落盘 scopes=[search]，切换标签不丢未保存编辑', async () => {
+  test('切到「搜索」添加关键字 → 保存：落盘 scopes=[search]，切换标签不丢未保存编辑', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await openPanel(page);
@@ -80,7 +80,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await expect(page.locator('#bilibiliConfig_words_search')).toContainText('测试关键字');
 
     // 用 title 锚定（闪烁期间 textContent 变化，text() 定位器会跟丢）
-    const onlySave = page.locator("xpath=//span[@title='仅保存设置']");
+    const onlySave = page.locator("xpath=//span[@title='保存设置']");
     await onlySave.click();
     await expect(onlySave).toHaveText('已保存');
     await expect
@@ -89,16 +89,16 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
-  test('取消：收起面板并在 800ms 后丢弃未保存编辑', async () => {
+  test('关闭：收起面板并在 800ms 后丢弃未保存编辑', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await openPanel(page);
     const checkbox = page.locator('#bilibiliConfig_enable');
     await expect(checkbox).toBeChecked();
-    // Block_Obj 样式 checkbox：input 被 clip 隐藏、label::before 是可视控件，点击 label 切换
+    // v6.6 总开关 toggle：隐藏 input + label 伪元素轨道，点击 label 切换
     await page.locator('label[for="bilibiliConfig_enable"]').click();
     await expect(checkbox).not.toBeChecked();
-    await page.locator("xpath=//span[text()='取消']").click();
+    await page.locator("xpath=//span[text()='关闭']").click();
     await expect(page.locator(WRAP)).toHaveClass(/block_obj_hidden_wrap/);
     // 重建后恢复为已保存状态
     await openPanel(page);
@@ -121,7 +121,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
       .locator("xpath=//input[@id='bilibiliConfig_durationSeconds_play']/following::span[text()='添加'][1]")
       .click();
     await expect(page.locator('#bilibiliConfig_durations_play')).toContainText('短于 15 秒');
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await page.locator("xpath=//span[@title='保存设置']").click();
     await expect
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).durations)
       .toEqual([{ op: 'lt', seconds: 15, scopes: ['play'] }]);
@@ -203,7 +203,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     const endingRow = page.locator('#bilibiliConfig_pane_play .block_obj_rule_row[data-rule-id="builtin-ending-related"]');
     await endingRow.getByText('删除', { exact: true }).click();
 
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await page.locator("xpath=//span[@title='保存设置']").click();
     await expect
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).rules)
       .toEqual(expect.arrayContaining([
@@ -216,7 +216,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
-  test('导出设置下载 JSON 文件 / 导入设置从文件生效', async () => {
+  test('导出下载 JSON 文件 / 导入从文件生效', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await openPanel(page);
@@ -224,7 +224,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     // 导出：触发浏览器下载
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator("xpath=//span[text()='导出设置']").click(),
+      page.locator("xpath=//span[text()='导出']").click(),
     ]);
     expect(download.suggestedFilename()).toBe('biliban-settings.json');
     const stream = await download.createReadStream();
@@ -262,7 +262,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page
       .locator("xpath=//input[@id='bilibiliConfig_wordInput_global']/following::span[text()='添加'][1]")
       .click();
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await page.locator("xpath=//span[@title='保存设置']").click();
     await expect
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).words)
       .toEqual(expect.arrayContaining([{ value: '带空格的词', scopes: ['global'] }]));
@@ -286,7 +286,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await row.getByText('编辑', { exact: true }).click();
     await row.locator('.block_obj_rule_selector_input').fill('.dur-card');
     await row.locator('.block_obj_rule_duration_input').fill('.dur');
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await page.locator("xpath=//span[@title='保存设置']").click();
     // 落盘：textSelectors 为空也保留（回归：v6.0 曾静默丢弃此类规则）
     await expect
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).rules)
@@ -316,7 +316,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     // 「启用」勾选可经 label 点击关闭（回归：label[for] 绑定修复）
     await row.locator('label').first().click();
     await expect(row.locator('input[type="checkbox"]')).not.toBeChecked();
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await page.locator("xpath=//span[@title='保存设置']").click();
     await expect
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).rules)
       .toEqual([

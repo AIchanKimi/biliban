@@ -82,7 +82,7 @@ test.describe('自定义规则（目标元素编辑）', () => {
       .poll(() => page.locator('[data-test="custom-match"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
 
-    // 打开面板 → 播放标签 → 关闭 r-match 启用 → 仅保存 → 不刷新即解除
+    // 打开面板 → 播放标签 → 关闭 r-match 启用 → 保存 → 不刷新即解除
     await page.waitForSelector('#blockObj_bilibiliConfig_expandSpan');
     const vp = page.viewportSize();
     await page.mouse.move(vp.width - 10, vp.height - 10);
@@ -92,14 +92,14 @@ test.describe('自定义规则（目标元素编辑）', () => {
     await page.locator('#bilibiliConfig_rulesToggle_play').click(); // 展开折叠的规则区
     const row = page.locator('#bilibiliConfig_pane_play .block_obj_rule_row[data-rule-id="r-match"]');
     await row.locator('label').first().click(); // 取消启用
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await page.locator("xpath=//span[@title='保存设置']").click();
     await expect
       .poll(() => page.locator('[data-test="custom-match"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(false);
 
     // 重新启用 → 保存 → 不刷新即再次屏蔽
     await row.locator('label').first().click();
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await page.locator("xpath=//span[@title='保存设置']").click();
     await expect
       .poll(() => page.locator('[data-test="custom-match"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);

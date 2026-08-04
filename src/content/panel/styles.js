@@ -77,6 +77,51 @@ export const LIB_STYLE = `
     user-select: none;
     vertical-align: middle;
   }
+  /* v6.6 总开关 toggle：状态切换轨道底色（off 灰 / on 黑） */
+  .block_obj_switch_input {
+    clip: rect(0, 0, 0, 0);
+    position: absolute;
+  }
+  .block_obj_switch {
+    align-items: center;
+    color: var(--bo-text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    gap: 6px;
+    position: relative;
+    user-select: none;
+  }
+  .block_obj_switch::before {
+    background-color: var(--bo-border-strong);
+    border-radius: 999px;
+    content: "";
+    flex: none;
+    height: 16px;
+    transition: background-color 0.15s ease;
+    width: 28px;
+  }
+  .block_obj_switch::after {
+    background-color: #FFF;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(9, 9, 11, 0.2);
+    content: "";
+    height: 12px;
+    left: 2px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: left 0.15s ease;
+    width: 12px;
+  }
+  .block_obj_switch_input:checked + .block_obj_switch::before {
+    background-color: var(--bo-primary);
+  }
+  .block_obj_switch_input:checked + .block_obj_switch::after {
+    left: 14px;
+  }
+  .block_obj_switch_input:focus-visible + .block_obj_switch::before {
+    box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.12);
+  }
   .block_obj_separator_text {
     color: var(--bo-text-secondary);
     display: inline-block;
@@ -482,26 +527,30 @@ export const LIB_STYLE = `
     right: 0;
     width: 6vw;
   }
+  /* v6.6：触发器与面板同风格——白底带边框圆角矩形 */
   .block_obj_expand_span {
-    background-color: #00A1D6;
-    border-radius: 19px;
-    border: 1px solid #00A1D6;
+    background-color: #FFF;
+    border-radius: 8px;
+    border: 1px solid #E4E4E7;
     bottom: 1vh;
-    color: #FFF;
+    box-shadow: 0 2px 8px rgba(9, 9, 11, 0.08);
+    color: #18181B;
     cursor: pointer;
     display: block;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
     font-size: 13px;
-    height: 38px;
-    line-height: 38px;
+    height: 30px;
+    line-height: 28px;
+    padding: 0 12px;
     position: absolute;
     right: 1vw;
     text-align: center;
-    width: 38px;
-    z-index: 99999;
     user-select: none;
+    z-index: 99999;
   }
   .block_obj_expand_span:hover {
-    box-shadow: 0 4px 12px rgba(0, 161, 214, 0.45);
+    background-color: #F4F4F5;
+    box-shadow: 0 2px 10px rgba(9, 9, 11, 0.12);
   }
   .block_obj_move_right {
     margin-left: 15px;

@@ -36,7 +36,6 @@ export async function start() {
       runtimeConfig = toRuntimeConfig(saved);
       hideEventRef();
     },
-    onTempCleared: () => hideEventRef(),
   });
   panel.init();
 

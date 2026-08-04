@@ -51,7 +51,7 @@ test.describe('临时屏蔽（过期制，固定 1 小时）', () => {
     await openPanel(page);
     await addTempKeyword(page, '广告');
     await expect(page.locator('#bilibiliConfig_words_search .block_obj_child_badge_temp')).toHaveText('临时');
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await page.locator("xpath=//span[@title='保存设置']").click();
 
     await expect
       .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
@@ -95,24 +95,6 @@ test.describe('临时屏蔽（过期制，固定 1 小时）', () => {
     await expect
       .poll(async () => ((await readStorageKey(toolsPage, TEMP_KEY)) ?? []).length)
       .toBe(0);
-    await page.close();
-  });
-
-  test('「清空临时词」立即解除屏蔽', async () => {
-    const page = await context.newPage();
-    await page.goto('https://search.bilibili.com/all?keyword=test');
-    await openPanel(page);
-    await addTempKeyword(page, '广告');
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
-    await expect
-      .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
-      .toBe(true);
-
-    // v6.4：「清空临时词」上收至页脚，作用于当前分类标签
-    await page.locator(WRAP).getByText('清空临时词', { exact: true }).click();
-    await expect
-      .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
-      .toBe(false);
     await page.close();
   });
 });

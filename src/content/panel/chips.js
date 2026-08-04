@@ -172,15 +172,3 @@ export function removeValues(listEl, values) {
   }
   return removed;
 }
-
-/**
- * 移除全部临时 chip（「清空临时词」DOM 侧）。
- * @param {HTMLElement} listEl
- */
-export function removeTempChips(listEl) {
-  for (const chip of [...listEl.getElementsByClassName(CHIP_CLASS)]) {
-    if (chip.dataset.temp === '1') {
-      chip.remove();
-    }
-  }
-}

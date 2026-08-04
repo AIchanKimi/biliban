@@ -1,4 +1,4 @@
-// 面板分节：单个作用域标签页的内容（屏蔽词组 + 自定义规则组 + 清空临时词）。
+// 面板分节：单个作用域标签页的内容（屏蔽词组 + 时长组 + 规则组）。
 // 作用域由标签页承载，组内不再出现作用域选择。
 import { FIELD_ID_PREFIX, SCOPE_PANE_CLASS, UL_NODE_CLASS, LIST_DIV_CLASS, LI_WORDS_CLASS } from '../../constants.js';
 import { createEntriesGroup } from './entries.js';
@@ -60,7 +60,6 @@ export function createScopePane(params) {
     extraLis.push(rulesLi);
   }
 
-  // v6.4：「清空临时词」上收至面板底部工具行（作用于当前分类），分节内不再单独成行
   for (const li of [...wordsGroup.lis, ...extraLis]) {
     innerUl.appendChild(li);
   }
