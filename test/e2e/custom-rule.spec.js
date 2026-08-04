@@ -48,6 +48,42 @@ test.describe('自定义规则（目标元素编辑）', () => {
     await page.close();
   });
 
+  test('match 规则启用开关保存后立即生效，无需刷新', async () => {
+    const extensionId = await getExtensionId(context);
+    const toolsPage = await openToolsPage(context, extensionId);
+    await seedConfig(toolsPage, baseConfig([
+      { id: 'r-match', selector: '.custom-match-card', scopes: ['play'], mode: 'match', textSelectors: ['.custom-title'], durationSelector: '', enabled: true },
+    ]));
+
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
+    await expect
+      .poll(() => page.locator('[data-test="custom-match"]').evaluate(el => el.classList.contains('block_obj_none')))
+      .toBe(true);
+
+    // 打开面板 → 播放标签 → 关闭 r-match 启用 → 仅保存 → 不刷新即解除
+    await page.waitForSelector('#blockObj_bilibiliConfig_expandSpan');
+    const vp = page.viewportSize();
+    await page.mouse.move(vp.width - 10, vp.height - 10);
+    await page.waitForTimeout(700);
+    await page.locator('#blockObj_bilibiliConfig_expandSpan').click();
+    await page.locator('#bilibiliConfig_tab_play').click();
+    const row = page.locator('#bilibiliConfig_pane_play .block_obj_rule_row[data-rule-id="r-match"]');
+    await row.locator('label').first().click(); // 取消启用
+    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await expect
+      .poll(() => page.locator('[data-test="custom-match"]').evaluate(el => el.classList.contains('block_obj_none')))
+      .toBe(false);
+
+    // 重新启用 → 保存 → 不刷新即再次屏蔽
+    await row.locator('label').first().click();
+    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await expect
+      .poll(() => page.locator('[data-test="custom-match"]').evaluate(el => el.classList.contains('block_obj_none')))
+      .toBe(true);
+    await page.close();
+  });
+
   test('durationSelector 扩展点：规则指定时长元素后按词条屏蔽，缺省探测找不到则不屏蔽', async () => {
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);

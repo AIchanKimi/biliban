@@ -30,10 +30,6 @@ export function createHideEvent(deps) {
     // v6.1：内置规则已在存储层并入 config.rules（normalize/migrate 播种与合并）
     for (const rule of config.rules ?? []) {
       const enabled = rule.enabled !== false;
-      // mode:'hide' 禁用时仍需执行以解除已施加的隐藏
-      if (!enabled && rule.mode !== 'hide') {
-        continue;
-      }
       if (!scopesApply(rule.scopes, category)) {
         continue;
       }
@@ -54,7 +50,12 @@ export function createHideEvent(deps) {
             }
             continue;
           }
-          // v5.5：文字选择器数组逐个提取，拼接后交给屏蔽词匹配
+          // 禁用的 match 规则：跳过判定，但须解除其已施加的隐藏（保存后立即生效，无需刷新）
+          if (!enabled) {
+            hideOperation(ele, false, rule.method ?? 0);
+            continue;
+          }
+          // 文字选择器数组逐个提取，拼接后交给屏蔽词匹配
           const texts = [];
           for (const textSelector of rule.textSelectors ?? []) {
             const textEl = extractEle(ele, textSelector);
