@@ -1,10 +1,9 @@
-// hideEvent —— 屏蔽执行总编排（v5.5 纯文字匹配）。
-// 实时页面分类 → 内置 + 自定义规则统一循环：
+// hideEvent —— 屏蔽执行总编排（v6.1 纯文字匹配）。
+// 实时页面分类 → 规则统一循环（内置已在存储层并入 config.rules）：
 //   mode:'hide'  直接隐藏（禁用时解除）；
 //   mode:'match' 文字选择器提取文本 → hideHandler（屏蔽词 + 时长词条）。
 // 命中统计（rule-stats）按轮覆盖写：每条规则记录本轮「匹配到几个 / 屏蔽了几个」，
 // 面板徽标因此反映当前页面状态，稳定不累加。
-import { BUILTIN_RULES } from '../rules/builtin-rules.js';
 import { categoryFor } from './category.js';
 import { setRuleStats } from './rule-stats.js';
 import { scopesApply } from '../config/scopes.js';
@@ -28,9 +27,8 @@ export function createHideEvent(deps) {
       return;
     }
     // 内置规则优先取用户持久化版本（面板编辑/删除后写回）；从未编辑过则用代码默认
-    const builtins = config.builtinRules !== undefined ? config.builtinRules : BUILTIN_RULES;
-    const rules = [...builtins, ...(config.rules ?? [])];
-    for (const rule of rules) {
+    // v6.1：内置规则已在存储层并入 config.rules（normalize/migrate 播种与合并）
+    for (const rule of config.rules ?? []) {
       const enabled = rule.enabled !== false;
       // mode:'hide' 禁用时仍需执行以解除已施加的隐藏
       if (!enabled && rule.mode !== 'hide') {

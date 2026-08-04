@@ -7,7 +7,8 @@ import {
   saveConfig,
   subscribe,
 } from '../../src/content/config/store.js';
-import { CONFIG_KEY, backupKeyFor } from '../../src/content/config/defaults.js';
+import { CONFIG_KEY, backupKeyFor, BUILTIN_RULES_VERSION } from '../../src/content/config/defaults.js';
+import { BUILTIN_RULES } from '../../src/content/rules/builtin-rules.js';
 
 // ---------- chrome.storage.local 内存 mock ----------
 function mockChrome(initial = {}) {
@@ -50,22 +51,21 @@ function mockChrome(initial = {}) {
   return store;
 }
 
-describe('normalize（v4 形状规范化）', () => {
-  test('null 输入 → 默认 v4 配置（冻结）', () => {
+describe('normalize（v5 形状规范化）', () => {
+  test('null 输入 → 默认配置（规则播种内置集，冻结）', () => {
     const result = normalize(null);
-    expect(result).toEqual({
-      version: 4,
-      enable: true,
-      words: [],
-      durations: [],
-      rules: [],
-    });
+    expect(result.version).toBe(5);
+    expect(result.enable).toBe(true);
+    expect(result.words).toEqual([]);
+    expect(result.durations).toEqual([]);
+    expect(result.builtinVersion).toBe(BUILTIN_RULES_VERSION);
+    expect(result.rules.length).toBe(BUILTIN_RULES.length);
     expect(Object.isFrozen(result)).toBe(true);
   });
 
   test('v1 形状自动迁移为统一 words', () => {
     const result = normalize({ functionEnable: false, keywordArray: ['广告'], usernameArray: ['某UP'] });
-    expect(result.version).toBe(4);
+    expect(result.version).toBe(5);
     expect(result.enable).toBe(false);
     expect(result.words).toEqual([
       { value: '某UP', scopes: ['global'] },
@@ -81,7 +81,7 @@ describe('normalize（v4 形状规范化）', () => {
       usernames: [{ value: 'u', scopes: ['global'] }],
       keywords: [{ value: 'k', scopes: ['search'] }],
     });
-    expect(result.version).toBe(4);
+    expect(result.version).toBe(5);
     expect(result.words).toEqual([
       { value: 'u', scopes: ['global'] },
       { value: 'k', scopes: ['search'] },
@@ -101,7 +101,7 @@ describe('normalize（v4 形状规范化）', () => {
 
   test('词条形状强制：value 非字符串/空串剔除，scopes 归一化（废弃分类回落 global）', () => {
     const result = normalize({
-      version: 4,
+      version: 5,
       words: [
         { value: 'ok', scopes: ['search'] },
         { value: '', scopes: ['search'] },
@@ -117,7 +117,7 @@ describe('normalize（v4 形状规范化）', () => {
   });
 
   test('列表字段非数组时强制为 []', () => {
-    const result = normalize({ version: 4, words: 'not-array', rules: null, durations: null });
+    const result = normalize({ version: 5, words: 'not-array', rules: null, durations: null });
     expect(result.words).toEqual([]);
     expect(result.rules).toEqual([]);
     expect(result.durations).toEqual([]);
@@ -125,7 +125,7 @@ describe('normalize（v4 形状规范化）', () => {
 
   test('时长词条强制：非法项剔除', () => {
     const result = normalize({
-      version: 4,
+      version: 5,
       durations: [
         { op: 'lt', seconds: 60, scopes: ['global'] },
         { op: 'bad', seconds: 60, scopes: ['global'] },
@@ -142,7 +142,7 @@ describe('normalize（v4 形状规范化）', () => {
 
   test('规则规范化：selector 必填，mode 收敛，textSelectors 数组，durationSelector 可选', () => {
     const result = normalize({
-      version: 4,
+      version: 5,
       rules: [
         { id: 'r1', selector: '.x', scopes: ['search'], mode: 'hide' },
         { id: 'r2', selector: '', scopes: ['home'], mode: 'match', textSelectors: ['.t'] },
@@ -159,39 +159,37 @@ describe('normalize（v4 形状规范化）', () => {
 
   test('旧形状规则：titleSelector/userSelector 并入 textSelectors', () => {
     const result = normalize({
-      version: 4,
+      version: 5,
       rules: [{ id: 'old', selector: '.card', scopes: ['play'], mode: 'match', titleSelector: '.t', userSelector: '.u' }],
     });
     expect(result.rules[0].textSelectors).toEqual(['.t', '.u']);
   });
 
-  test('builtinRules：版本一致才承认持久化；版本不一致整体回落代码默认', () => {
-    const withBuiltins = normalize({
+  test('v6.1：输出不再含 builtinRules 字段，builtinVersion 恒为当前集版本', () => {
+    const result = normalize({
+      version: 5,
+      rules: [{ id: 'r1', selector: '.x', scopes: ['play'], mode: 'hide' }],
+    });
+    expect('builtinRules' in result).toBe(false);
+    expect(result.builtinVersion).toBe(BUILTIN_RULES_VERSION);
+    expect(result.rules.map(r => r.id)).toContain('r1');
+  });
+
+  test('v4 迁移：持久化的 builtinRules 并入 rules，用户编辑保留', () => {
+    const result = normalize({
       version: 4,
       builtinVersion: 3,
-      builtinRules: [{ id: 'builtin-x', selector: '.x', scopes: ['play'], mode: 'match', textSelectors: ['.t'] }],
+      builtinRules: [{ id: 'builtin-bili-video-card', selector: '.edited', scopes: ['play'], mode: 'match', textSelectors: ['.t'] }],
+      rules: [{ id: 'custom-1', selector: '.c', scopes: ['search'], mode: 'hide' }],
     });
-    expect(withBuiltins.builtinRules).toEqual([
-      { id: 'builtin-x', selector: '.x', scopes: ['play'], mode: 'match', textSelectors: ['.t'], durationSelector: '', enabled: true },
-    ]);
-    expect(withBuiltins.builtinVersion).toBe(3);
-
-    // 旧版本固化集 → 丢弃，引擎回落代码默认
-    const stale = normalize({
-      version: 4,
-      builtinVersion: 2,
-      builtinRules: [{ id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', textSelectors: ['.t'] }],
-    });
-    expect('builtinRules' in stale).toBe(false);
-
-    const withoutBuiltins = normalize({ version: 4 });
-    expect('builtinRules' in withoutBuiltins).toBe(false);
-    // 空数组合法（用户删除了全部内置规则），版本一致时保留
-    expect(normalize({ version: 4, builtinVersion: 3, builtinRules: [] }).builtinRules).toEqual([]);
+    const edited = result.rules.find(r => r.id === 'builtin-bili-video-card');
+    expect(edited.selector).toBe('.edited'); // 用户编辑过的内置规则保留
+    expect(result.rules.find(r => r.id === 'custom-1')).toBeTruthy();
+    expect(result.rules.find(r => r.id === 'builtin-space-cube')).toBeTruthy(); // 其余内置按 id 补入
   });
 
   test('不修改入参（不可变）', () => {
-    const input = { version: 4, words: [{ value: 'a', scopes: ['home'] }] };
+    const input = { version: 5, words: [{ value: 'a', scopes: ['home'] }] };
     normalize(input);
     expect(input.words[0].scopes).toEqual(['home']);
   });
@@ -200,7 +198,7 @@ describe('normalize（v4 形状规范化）', () => {
 describe('toRuntimeConfig / toStorageObject', () => {
   test('words 完成正则重建，durations 原样', () => {
     const result = toRuntimeConfig({
-      version: 4,
+      version: 5,
       words: [{ value: '/x/i', scopes: ['global'] }, { value: '普通', scopes: ['play'] }],
       durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
     });
@@ -211,37 +209,38 @@ describe('toRuntimeConfig / toStorageObject', () => {
 
   test('往返一致：toRuntimeConfig → toStorageObject → 原存储形状', () => {
     const raw = {
-      version: 4,
+      version: 5,
       enable: true,
       durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
       words: [{ value: '/a,b/gi', scopes: ['search'] }, { value: '广告', scopes: ['global'] }],
       rules: [{ id: 'r1', selector: '.x', scopes: ['play'], mode: 'hide', textSelectors: ['.t'], durationSelector: '', enabled: true }],
+      builtinVersion: BUILTIN_RULES_VERSION,
     };
     expect(toStorageObject(toRuntimeConfig(raw))).toEqual(raw);
   });
 });
 
 describe('loadConfig（迁移写回与版本化备份）', () => {
-  test('v1 存储 → 写回 v4 + v1 备份键', async () => {
+  test('v1 存储 → 写回 v5 + v1 备份键', async () => {
     const store = mockChrome({ [CONFIG_KEY]: { functionEnable: true, keywordArray: ['广告'], commentArray: ['丢'] } });
     const config = await loadConfig();
-    expect(config.version).toBe(4);
+    expect(config.version).toBe(5);
     expect(config.words).toEqual([{ value: '广告', scopes: ['global'] }]);
-    expect(store[CONFIG_KEY].version).toBe(4);
+    expect(store[CONFIG_KEY].version).toBe(5);
     expect(store[backupKeyFor(1)]).toEqual({ functionEnable: true, keywordArray: ['广告'], commentArray: ['丢'] });
   });
 
-  test('v3 存储 → 升级 v4 + v3 备份键', async () => {
+  test('v3 存储 → 升级 v5 + v3 备份键', async () => {
     const v3 = { version: 3, enable: true, duration: { enable: true, minSeconds: 60 }, words: [], rules: [] };
     const store = mockChrome({ [CONFIG_KEY]: v3 });
     const config = await loadConfig();
-    expect(config.version).toBe(4);
+    expect(config.version).toBe(5);
     expect(config.durations).toEqual([{ op: 'lt', seconds: 60, scopes: ['global'] }]);
     expect(store[backupKeyFor(3)]).toEqual(v3);
   });
 
   test('v4 存储直通，不写备份', async () => {
-    const v4 = { version: 4, enable: true, words: [], durations: [], rules: [] };
+    const v4 = { version: 5, enable: true, words: [], durations: [], rules: [] };
     const store = mockChrome({ [CONFIG_KEY]: v4 });
     await loadConfig();
     expect(store[backupKeyFor(1)]).toBeUndefined();
@@ -263,18 +262,18 @@ describe('saveConfig + subscribe（回显过滤）', () => {
     const received = [];
     const unsubscribe = subscribe(config => received.push(config));
 
-    await saveConfig({ version: 4, enable: true, words: [{ value: '自己写的', scopes: ['global'] }], durations: [], rules: [] });
+    await saveConfig({ version: 5, enable: true, words: [{ value: '自己写的', scopes: ['global'] }], durations: [], rules: [] });
     expect(received.length).toBe(0);
 
     // 模拟远端标签页写入（键序不同也不应误判——canonicalJson 键序无关）
     await chrome.storage.local.set({
-      [CONFIG_KEY]: { version: 4, words: [{ scopes: ['search'], value: '远端词' }], rules: [], durations: [], enable: true },
+      [CONFIG_KEY]: { version: 5, words: [{ scopes: ['search'], value: '远端词' }], rules: [], durations: [], enable: true },
     });
     expect(received.length).toBe(1);
     expect(received[0].words).toEqual([{ value: '远端词', scopes: ['search'] }]);
 
     unsubscribe();
-    await chrome.storage.local.set({ [CONFIG_KEY]: { version: 4, enable: false, words: [], durations: [], rules: [] } });
+    await chrome.storage.local.set({ [CONFIG_KEY]: { version: 5, enable: false, words: [], durations: [], rules: [] } });
     expect(received.length).toBe(1);
   });
 

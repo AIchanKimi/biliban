@@ -135,12 +135,9 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await openPanel(page);
     await page.locator('#bilibiliConfig_tab_play').click();
-    // builtin-bili-video-card 属播放分类，行在「播放」标签
-    // 内置规则行：默认收起（概览），带「内置」标记
-    const builtinBadges = page.locator('#bilibiliConfig_pane_play .block_obj_rule_builtin_badge');
-    await expect(builtinBadges.first()).toBeVisible();
-    await expect(page.locator('#bilibiliConfig_pane_play')).toContainText('内置');
+    // builtin-bili-video-card 属播放分类，行在「播放」标签；规则行默认收起（概览）
     const cardRow = page.locator('#bilibiliConfig_pane_play .block_obj_rule_row[data-rule-id="builtin-bili-video-card"]');
+    await expect(cardRow).toBeVisible();
     await expect(cardRow.locator('.block_obj_rule_summary')).toContainText('bili-video-card');
     // fixture 有 6 张 .bili-video-card 卡片：该规则统计徽标命中（引擎在面板打开前已跑过多轮）
     const statsBadge = page.locator('#bilibiliConfig_pane_play .block_obj_rule_stats[data-rule-id="builtin-bili-video-card"]');
@@ -170,7 +167,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
-  test('内置规则可编辑：点「编辑」改选择器 + 删除，保存后写回 builtinRules', async () => {
+  test('规则可编辑：点「编辑」改选择器 + 删除，保存后写回 rules', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await openPanel(page);
@@ -178,7 +175,6 @@ test.describe('设置面板 v2（标签页式管理）', () => {
 
     // 编辑视频页右侧推荐行：默认收起，先点「编辑」展开再改选择器
     const pageCardRow = page.locator('#bilibiliConfig_pane_play .block_obj_rule_row[data-rule-id="builtin-video-page-card"]');
-    await expect(pageCardRow.locator('.block_obj_rule_builtin_badge')).toHaveText('内置');
     await pageCardRow.getByText('编辑', { exact: true }).click();
     await pageCardRow.locator('.block_obj_rule_selector_input').fill('.video-page-card-v2');
 
@@ -188,14 +184,14 @@ test.describe('设置面板 v2（标签页式管理）', () => {
 
     await page.locator("xpath=//span[@title='仅保存设置']").click();
     await expect
-      .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).builtinRules)
+      .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).rules)
       .toEqual(expect.arrayContaining([
         expect.objectContaining({ id: 'builtin-video-page-card', selector: '.video-page-card-v2', scopes: ['play'] }),
       ]));
-    const builtinRules = (await readStorageKey(toolsPage, 'bilibili_config')).builtinRules;
-    expect(builtinRules.find(r => r.id === 'builtin-ending-related' && r.scopes[0] === 'play')).toBeUndefined();
-    // video 页其余内置规则仍在（未误删）
-    expect(builtinRules.filter(r => r.scopes[0] === 'play').length).toBeGreaterThanOrEqual(3);
+    const rules = (await readStorageKey(toolsPage, 'bilibili_config')).rules;
+    expect(rules.find(r => r.id === 'builtin-ending-related' && r.scopes[0] === 'play')).toBeUndefined();
+    // 播放分类其余规则仍在（未误删）
+    expect(rules.filter(r => r.scopes[0] === 'play').length).toBeGreaterThanOrEqual(3);
     await page.close();
   });
 
@@ -216,8 +212,9 @@ test.describe('设置面板 v2（标签页式管理）', () => {
       chunks.push(chunk);
     }
     const exported = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    expect(exported.version).toBe(4);
-    expect(Array.isArray(exported.builtinRules)).toBe(true);
+    expect(exported.version).toBe(5);
+    // v6.1：内置规则已并入 rules，导出即全量
+    expect(exported.rules.some(r => r.id === 'builtin-bili-video-card')).toBe(true);
 
     // 导入：选择 JSON 文件 → 存储更新 → 面板重建显示新词条
     const filePath = path.join(os.tmpdir(), 'biliban-import-test.json');
@@ -233,6 +230,38 @@ test.describe('设置面板 v2（标签页式管理）', () => {
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).words)
       .toEqual([{ value: '导入测试词', scopes: ['global'] }]);
     await expect(page.locator('#bilibiliConfig_words_global')).toContainText('导入测试词');
+    await page.close();
+  });
+
+  test('无文字选择器的 match 规则照常保存（纯时长规则不再被静默丢弃）', async () => {
+    // 预置一条全局时长词条：短于 60 秒
+    await seedConfig(toolsPage, {
+      version: 5, enable: true, words: [], rules: [],
+      durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
+    });
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
+    await openPanel(page);
+    await page.locator('#bilibiliConfig_tab_play').click();
+    await page.locator('#bilibiliConfig_rules_play').getByText('添加规则', { exact: true }).click();
+    const row = page.locator('#bilibiliConfig_rules_play .block_obj_rule_row').last();
+    await row.getByText('编辑', { exact: true }).click();
+    await row.locator('.block_obj_rule_selector_input').fill('.dur-card');
+    await row.locator('.block_obj_rule_duration_input').fill('.dur');
+    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    // 落盘：textSelectors 为空也保留（回归：v6.0 曾静默丢弃此类规则）
+    await expect
+      .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).rules)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ selector: '.dur-card', mode: 'match', textSelectors: [], durationSelector: '.dur' }),
+      ]));
+    // 生效：0:45 < 60s → 隐藏
+    await page.reload();
+    await expect
+      .poll(() => page.locator('[data-test="card-dursel"]').evaluate(el => el.classList.contains('block_obj_none')))
+      .toBe(true);
+    // 还原
+    await seedConfig(toolsPage, { version: 5, enable: true, words: [], durations: [], rules: [] });
     await page.close();
   });
 

@@ -143,20 +143,15 @@ export function normalize(rawConfig) {
     }
     return Object.freeze(result);
   };
-  const result = {
+  // v5：内置规则已由 migrate.mergeRulesWithBuiltins 并入 rules（与自定义规则同构）
+  return Object.freeze({
     version: CONFIG_VERSION,
     enable: base.enable ?? true,
     words: sanitizeEntries(base.words),
     durations: sanitizeDurations(base.durations),
     rules: sanitizeRuleList(base.rules),
-  };
-  // 内置规则的持久化版本（面板编辑/删除后写回）；从未编辑过则缺省，引擎回落代码默认。
-  // builtinVersion 与代码内置集版本不一致时整体丢弃 → 升级扩展后新内置集自动生效。
-  if (Array.isArray(base.builtinRules) && base.builtinVersion === BUILTIN_RULES_VERSION) {
-    result.builtinRules = sanitizeRuleList(base.builtinRules);
-    result.builtinVersion = BUILTIN_RULES_VERSION;
-  }
-  return Object.freeze(result);
+    builtinVersion: BUILTIN_RULES_VERSION,
+  });
 }
 
 /**

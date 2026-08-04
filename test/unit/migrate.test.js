@@ -1,17 +1,20 @@
 import { describe, test, expect } from 'bun:test';
-import { isCurrentVersion, migrateToLatest } from '../../src/content/config/migrate.js';
+import { isCurrentVersion, migrateToLatest, mergeRulesWithBuiltins } from '../../src/content/config/migrate.js';
+import { BUILTIN_RULES_VERSION } from '../../src/content/config/defaults.js';
+import { BUILTIN_RULES } from '../../src/content/rules/builtin-rules.js';
 
-const V4_EMPTY = {
-  version: 4,
+const V5_EMPTY = {
+  version: 5,
   enable: true,
   words: [],
   durations: [],
-  rules: [],
+  rules: [...BUILTIN_RULES],
 };
 
 describe('isCurrentVersion', () => {
-  test('version===4 才算当前版本', () => {
-    expect(isCurrentVersion({ version: 4 })).toBe(true);
+  test('version===5 才算当前版本', () => {
+    expect(isCurrentVersion({ version: 5 })).toBe(true);
+    expect(isCurrentVersion({ version: 4 })).toBe(false);
     expect(isCurrentVersion({ version: 3 })).toBe(false);
     expect(isCurrentVersion({ version: 2 })).toBe(false);
     expect(isCurrentVersion({})).toBe(false);
@@ -19,7 +22,7 @@ describe('isCurrentVersion', () => {
   });
 });
 
-describe('migrateToLatest：v1 → v4', () => {
+describe('migrateToLatest：v1 → v5', () => {
   test('usernameArray 与 keywordArray 合并为全局 words（用户名在前）', () => {
     const result = migrateToLatest({ usernameArray: ['某UP'], keywordArray: ['广告', '/x/i'] });
     expect(result.words).toEqual([
@@ -27,8 +30,9 @@ describe('migrateToLatest：v1 → v4', () => {
       { value: '广告', scopes: ['global'] },
       { value: '/x/i', scopes: ['global'] },
     ]);
-    expect(result.version).toBe(4);
+    expect(result.version).toBe(5);
     expect(result.durations).toEqual([]);
+    expect(result.rules).toEqual([...BUILTIN_RULES]); // 首次迁移播种内置规则
   });
 
   test('TM 旧形状：regArray 并入', () => {
@@ -49,11 +53,11 @@ describe('migrateToLatest：v1 → v4', () => {
       commentEnable: true,
       liveEnable: true,
     });
-    expect(result).toEqual(V4_EMPTY);
+    expect(result).toEqual(V5_EMPTY);
   });
 
-  test('null / undefined 输入 → 默认 v4', () => {
-    expect(migrateToLatest(null)).toEqual(V4_EMPTY);
+  test('null / undefined 输入 → 默认 v5', () => {
+    expect(migrateToLatest(null)).toEqual(V5_EMPTY);
   });
 
   test('不修改入参（不可变）', () => {
@@ -63,7 +67,7 @@ describe('migrateToLatest：v1 → v4', () => {
   });
 });
 
-describe('migrateToLatest：v2 → v4', () => {
+describe('migrateToLatest：v2 → v5', () => {
   test('usernames 与 keywords 合并，保留作用域', () => {
     const result = migrateToLatest({
       version: 2,
@@ -78,11 +82,11 @@ describe('migrateToLatest：v2 → v4', () => {
       { value: '广告', scopes: ['search'] },
     ]);
     expect(result.durations).toEqual([{ op: 'lt', seconds: 120, scopes: ['global'] }]);
-    expect(result.rules.length).toBe(1);
+    expect(result.rules.length).toBe(BUILTIN_RULES.length + 1); // 内置播种 + 自定义
   });
 });
 
-describe('migrateToLatest：v3 → v4', () => {
+describe('migrateToLatest：v3 → v5', () => {
   test('全局 duration 开关转为「短于」词条', () => {
     const result = migrateToLatest({
       version: 3,
@@ -91,13 +95,10 @@ describe('migrateToLatest：v3 → v4', () => {
       words: [{ value: '广告', scopes: ['global'] }],
       rules: [{ id: 'r1', selector: '.x', scopes: ['home'], mode: 'hide' }],
     });
-    expect(result).toEqual({
-      version: 4,
-      enable: true,
-      words: [{ value: '广告', scopes: ['global'] }],
-      durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
-      rules: [{ id: 'r1', selector: '.x', scopes: ['home'], mode: 'hide' }],
-    });
+    expect(result.version).toBe(5);
+    expect(result.words).toEqual([{ value: '广告', scopes: ['global'] }]);
+    expect(result.durations).toEqual([{ op: 'lt', seconds: 60, scopes: ['global'] }]);
+    expect(result.rules.length).toBe(BUILTIN_RULES.length + 1);
   });
 
   test('duration 关闭 → 无词条', () => {
@@ -124,5 +125,47 @@ describe('migrateToLatest：v3 → v4', () => {
       { value: 'a', scopes: ['global'] },
       { value: 'b', scopes: ['home'] },
     ]);
+  });
+});
+
+describe('mergeRulesWithBuiltins（v6.1 内置/自定义同构合并）', () => {
+  test('无持久化内置集 → 以代码默认为底，自定义在后', () => {
+    const merged = mergeRulesWithBuiltins([{ id: 'custom-1', selector: '.c' }], undefined, undefined);
+    expect(merged.filter(r => String(r.id).startsWith('builtin-')).length).toBe(BUILTIN_RULES.length);
+    expect(merged[merged.length - 1].id).toBe('custom-1');
+  });
+
+  test('版本一致的持久化内置集原样为准（用户删过的不复活）', () => {
+    const stored = [{ id: 'builtin-bili-video-card', selector: '.edited', scopes: ['play'] }];
+    const merged = mergeRulesWithBuiltins([], stored, BUILTIN_RULES_VERSION);
+    expect(merged.length).toBe(1); // 版本一致不补入代码项
+    expect(merged[0].selector).toBe('.edited');
+  });
+
+  test('内置集版本落后 → 按 id 补入代码新增项，不覆盖同名', () => {
+    const stored = [{ id: 'builtin-bili-video-card', selector: '.edited', scopes: ['play'] }];
+    const merged = mergeRulesWithBuiltins([], stored, BUILTIN_RULES_VERSION - 1);
+    const edited = merged.filter(r => r.id === 'builtin-bili-video-card');
+    expect(edited.length).toBe(1);
+    expect(edited[0].selector).toBe('.edited');
+    expect(merged.length).toBe(BUILTIN_RULES.length);
+  });
+
+  test('自定义与内置 id 冲突时先出现者（内置）优先', () => {
+    const merged = mergeRulesWithBuiltins([{ id: BUILTIN_RULES[0].id, selector: '.custom-dup' }], undefined, undefined);
+    expect(merged.filter(r => r.id === BUILTIN_RULES[0].id).length).toBe(1);
+    expect(merged.find(r => r.id === BUILTIN_RULES[0].id).selector).toBe(BUILTIN_RULES[0].selector);
+  });
+
+  test('v4 迁移整体：builtinRules 并入 rules，v5 直通', () => {
+    const fromV4 = migrateToLatest({
+      version: 4,
+      builtinRules: [{ id: 'builtin-space-cube', selector: '.kept', scopes: ['space'] }],
+      rules: [{ id: 'mine', selector: '.m', scopes: ['fav'] }],
+    });
+    expect(fromV4.version).toBe(5);
+    expect(fromV4.rules.find(r => r.id === 'builtin-space-cube').selector).toBe('.kept');
+    expect(fromV4.rules.find(r => r.id === 'mine')).toBeTruthy();
+    expect('builtinRules' in fromV4).toBe(false);
   });
 });

@@ -15,18 +15,17 @@ import { removeTempChips } from '../chips.js';
  *   durations: ReadonlyArray<{ op: string, seconds: number, scopes: string[] }>,
  *   tempDurations: ReadonlyArray<{ op: string, seconds: number, scopes: string[] }>,
  *   rules: ReadonlyArray<Record<string, unknown>>,
- *   builtinRules: ReadonlyArray<Record<string, unknown>> | undefined,
  *   onTempCleared: () => void,
  * }} params
  * @returns {{
  *   el: HTMLElement,
- *   collect: () => { words: object, durations: object, builtinRules: Array<Record<string, unknown>>, rules: Array<Record<string, unknown>>, invalidCount: number },
+ *   collect: () => { words: object, durations: object, rules: Array<Record<string, unknown>> },
  * }}
  */
 export function createScopePane(params) {
-  const { scope, words, tempWords, durations, tempDurations, rules, builtinRules, onTempCleared } = params;
-  // 「全局」面板仅管理屏蔽词；时长词条与规则归各具体分类
-  const wordsOnly = scope === 'global';
+  const { scope, words, tempWords, durations, tempDurations, rules, onTempCleared } = params;
+  // 「全局」面板管理屏蔽词 + 时长词条；规则归各具体分类
+  const rulesAllowed = scope !== 'global';
 
   const pane = document.createElement('li');
   pane.className = SCOPE_PANE_CLASS;
@@ -43,25 +42,24 @@ export function createScopePane(params) {
     tempEntries: tempWords,
   });
 
-  let durationsGroup = null;
-  let rulesGroup = null;
-  const extraLis = [];
-  if (!wordsOnly) {
-    durationsGroup = createDurationsGroup({
-      scope,
-      entries: durations,
-      tempEntries: tempDurations,
-    });
+  const durationsGroup = createDurationsGroup({
+    scope,
+    entries: durations,
+    tempEntries: tempDurations,
+  });
+  const extraLis = [...durationsGroup.lis];
 
+  let rulesGroup = null;
+  if (rulesAllowed) {
     const ruleSeparator = document.createElement('li');
     ruleSeparator.className = SEPARATOR_LI_CLASS;
     const ruleSeparatorText = document.createElement('span');
     ruleSeparatorText.className = SEPARATOR_TEXT_CLASS;
-    ruleSeparatorText.textContent = '自定义规则（B 站改版后在此改选择器）：';
+    ruleSeparatorText.textContent = '规则（B 站改版后在此改选择器）：';
     ruleSeparatorText.title = '规则教扩展认识本页面的卡片容器；无需修改扩展代码';
     ruleSeparator.appendChild(ruleSeparatorText);
 
-    rulesGroup = createRulesGroup({ scope, rules, builtinRules });
+    rulesGroup = createRulesGroup({ scope, rules });
     const rulesLi = document.createElement('li');
     const rulesDiv = document.createElement('div');
     rulesDiv.className = LIST_DIV_CLASS;
@@ -69,7 +67,7 @@ export function createScopePane(params) {
     rulesDiv.appendChild(rulesGroup.container);
     rulesLi.appendChild(rulesDiv);
 
-    extraLis.push(...durationsGroup.lis, ruleSeparator, rulesLi);
+    extraLis.push(ruleSeparator, rulesLi);
   }
 
   const clearTempLi = document.createElement('li');
@@ -90,22 +88,13 @@ export function createScopePane(params) {
   }
 
   function collect() {
-    const wordsResult = wordsGroup.collect();
     const result = {
-      words: wordsResult,
-      durations: { persistent: [], temp: [] },
-      builtinRules: [],
+      words: wordsGroup.collect(),
+      durations: durationsGroup.collect(),
       rules: [],
-      invalidCount: 0,
     };
-    if (durationsGroup) {
-      result.durations = durationsGroup.collect();
-    }
     if (rulesGroup) {
-      const rulesResult = rulesGroup.collect();
-      result.builtinRules = rulesResult.builtinRules;
-      result.rules = rulesResult.rules;
-      result.invalidCount = rulesResult.invalidCount;
+      result.rules = rulesGroup.collect().rules;
     }
     return result;
   }

@@ -25,11 +25,10 @@ import {
   TAB_CLASS,
   TAB_ACTIVE_CLASS,
 } from '../constants.js';
-import { CONFIG_VERSION, CONFIG_KEY, BUILTIN_RULES_VERSION } from '../config/defaults.js';
+import { CONFIG_VERSION, CONFIG_KEY } from '../config/defaults.js';
 import { SCOPES } from '../config/scopes.js';
 import { getTempEntries, setTempEntries, removeTempEntriesByScope } from '../config/temp-store.js';
 import { normalize } from '../config/store.js';
-import { BUILTIN_RULES } from '../rules/builtin-rules.js';
 import { getRuleStats } from '../engine/rule-stats.js';
 import { categoryFor } from '../engine/category.js';
 import { RULE_STATS_CLASS, RULE_STATS_HIT_CLASS, TAB_CURRENT_CLASS } from '../constants.js';
@@ -109,7 +108,7 @@ export function createPanel(deps) {
     tabSeparator.className = SEPARATOR_LI_CLASS;
     const tabSeparatorText = document.createElement('span');
     tabSeparatorText.className = SEPARATOR_TEXT_CLASS;
-    tabSeparatorText.textContent = '按页面分类管理（「全局」覆盖全部已匹配页面，仅屏蔽词；规则归各具体分类）：';
+    tabSeparatorText.textContent = '按页面分类管理（「全局」覆盖全部已匹配页面：屏蔽词+时长；规则归各具体分类）：';
     tabSeparator.appendChild(tabSeparatorText);
     ulNode.appendChild(tabSeparator);
 
@@ -142,8 +141,7 @@ export function createPanel(deps) {
         tempWords: tempWordsByScope(scope),
         durations: entriesByScope(config.durations, scope),
         tempDurations: tempDurationsByScope(scope),
-        rules: entriesByScope(config.rules, scope),
-        builtinRules: config.builtinRules ? entriesByScope(config.builtinRules, scope) : undefined,
+        rules: config.rules,
         onTempCleared: () => {
           removeTempEntriesByScope(scope);
           onTempCleared();
@@ -200,12 +198,9 @@ export function createPanel(deps) {
     document.body.appendChild(wrapDiv);
   }
 
-  /** 全量导出为 JSON 文件下载（内置规则未固化时以代码默认补全） */
+  /** 全量导出为 JSON 文件下载（v6.1 起规则已含全部内置项，config 即全量） */
   function exportSettings() {
-    const exported = {
-      ...config,
-      builtinRules: config.builtinRules ?? BUILTIN_RULES.map(rule => ({ ...rule })),
-    };
+    const exported = { ...config };
     const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -261,15 +256,13 @@ export function createPanel(deps) {
     return btn;
   }
 
-  /** DOM → { storage 存储形状, temp 临时词条, invalidCount }（遍历全部分类页） */
+  /** DOM → { storage 存储形状, temp 临时词条 }（遍历全部分类页） */
   function collectFromDom() {
     const general = generalSection.collect();
     const words = [];
     const durations = [];
     const temp = [];
-    const builtinRules = [];
     const rules = [];
-    let invalidCount = 0;
     for (const { pane } of panes) {
       const result = pane.collect();
       words.push(...result.words.persistent);
@@ -278,15 +271,11 @@ export function createPanel(deps) {
         ...result.words.temp.map(entry => ({ ...entry, kind: 'word' })),
         ...result.durations.temp.map(entry => ({ ...entry, kind: 'duration' }))
       );
-      builtinRules.push(...result.builtinRules);
       rules.push(...result.rules);
-      invalidCount += result.invalidCount;
     }
     return {
-      // builtinVersion 与内置集版本一致时 normalize 才承认持久化的 builtinRules
-      storage: { version: CONFIG_VERSION, enable: general.enable, words, durations, builtinRules, builtinVersion: BUILTIN_RULES_VERSION, rules },
+      storage: { version: CONFIG_VERSION, enable: general.enable, words, durations, rules },
       temp,
-      invalidCount,
     };
   }
 
@@ -318,14 +307,8 @@ export function createPanel(deps) {
     }
   }
 
-  async function save(clickedBtn = null) {
-    const { storage, temp, invalidCount } = collectFromDom();
-    if (invalidCount > 0) {
-      console.error('[bilibili_block] 存在无效自定义规则（选择器无法编译，或过滤模式缺少标题/UP主选择器），已跳过:', invalidCount);
-      if (clickedBtn) {
-        clickedBtn.title = '部分规则无效已跳过';
-      }
-    }
+  async function save() {
+    const { storage, temp } = collectFromDom();
     setTempEntries(temp);
     config = storage;
     await persist(storage);

@@ -1,8 +1,10 @@
-// 存储迁移：v1（含油猴原脚本形状）/ v2 / v3 → v4（当前）。纯函数；备份与写回由 store.loadConfig 负责。
+// 存储迁移：v1（含油猴原脚本形状）/ v2 / v3 / v4 → v5（当前）。纯函数；备份与写回由 store.loadConfig 负责。
 // v1 丢弃项（不可逆，loadConfig 迁移前写版本化备份键）：commentArray/whitelistArray、各废弃开关。
 // v2 → v3 语义：usernames 与 keywords 合并为 words。
 // v3 → v4：全局 duration 开关转为一条时长词条 {op:'lt', seconds, scopes:['global']}（关闭则无）。
-import { CONFIG_VERSION } from './defaults.js';
+// v4 → v5：取消 builtinRules 双轨——内置规则并入 rules，与自定义规则完全同构。
+import { CONFIG_VERSION, BUILTIN_RULES_VERSION } from './defaults.js';
+import { BUILTIN_RULES } from '../rules/builtin-rules.js';
 
 /**
  * @param {unknown} rawConfig
@@ -66,19 +68,61 @@ function durationFromV3(duration) {
 }
 
 /**
- * 任意旧形状 → v4（不修改入参）。
+ * 规则统一合并（v5）：内置规则与自定义规则并入同一列表。
+ * - v4 持久化过 builtinRules → 以它为准（用户编辑过的内置规则保留）
+ * - 否则以代码默认 BUILTIN_RULES 为底
+ * - 内置集版本落后时按 id 补入代码中新增的内置规则（不覆盖同名已有规则）
+ * - 内置在前、自定义在后，按 id 去重（先出现者优先）
+ * @param {unknown} customRules
+ * @param {unknown} storedBuiltins
+ * @param {unknown} storedBuiltinVersion
+ * @returns {Array<object>}
+ */
+export function mergeRulesWithBuiltins(customRules, storedBuiltins, storedBuiltinVersion) {
+  const builtinBase = Array.isArray(storedBuiltins) ? [...storedBuiltins] : [...BUILTIN_RULES];
+  if (storedBuiltinVersion !== BUILTIN_RULES_VERSION) {
+    for (const rule of BUILTIN_RULES) {
+      if (!builtinBase.some(item => item && item.id === rule.id)) {
+        builtinBase.push(rule);
+      }
+    }
+  }
+  const merged = [...builtinBase, ...(Array.isArray(customRules) ? customRules : [])];
+  const seen = new Set();
+  const result = [];
+  for (const rule of merged) {
+    if (!rule || !rule.id || seen.has(rule.id)) {
+      continue;
+    }
+    seen.add(rule.id);
+    result.push(rule);
+  }
+  return result;
+}
+
+/**
+ * 任意旧形状 → v5（不修改入参）。
  * @param {Record<string, unknown> | null | undefined} rawConfig
- * @returns {{ version: number, enable: boolean, words: Array<object>, durations: Array<object>, rules: unknown[] }}
+ * @returns {{ version: number, enable: boolean, words: Array<object>, durations: Array<object>, rules: Array<object> }}
  */
 export function migrateToLatest(rawConfig) {
   const source = rawConfig ?? {};
+  if (source.version === 4) {
+    return {
+      version: CONFIG_VERSION,
+      enable: source.enable ?? true,
+      words: dedupeEntries(fromObjectList(source.words)),
+      durations: Array.isArray(source.durations) ? source.durations : [],
+      rules: mergeRulesWithBuiltins(source.rules, source.builtinRules, source.builtinVersion),
+    };
+  }
   if (source.version === 3) {
     return {
       version: CONFIG_VERSION,
       enable: source.enable ?? true,
       words: dedupeEntries(fromObjectList(source.words)),
       durations: durationFromV3(source.duration),
-      rules: Array.isArray(source.rules) ? source.rules : [],
+      rules: mergeRulesWithBuiltins(source.rules, undefined, undefined),
     };
   }
   if (source.version === 2) {
@@ -87,7 +131,7 @@ export function migrateToLatest(rawConfig) {
       enable: source.enable ?? true,
       words: dedupeEntries([...fromObjectList(source.usernames), ...fromObjectList(source.keywords)]),
       durations: durationFromV3(source.duration),
-      rules: Array.isArray(source.rules) ? source.rules : [],
+      rules: mergeRulesWithBuiltins(source.rules, undefined, undefined),
     };
   }
   // v1（含 Tampermonkey 原形状）
@@ -103,6 +147,6 @@ export function migrateToLatest(rawConfig) {
       ...toGlobalEntries(keywordSource),
     ]),
     durations: [],
-    rules: [],
+    rules: mergeRulesWithBuiltins([], undefined, undefined),
   };
 }

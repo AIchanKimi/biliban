@@ -1,19 +1,17 @@
 // 面板分节：规则组（归属某作用域标签页）。
-// 组成：内置规则行 → 自定义规则行 → 添加按钮。
+// v6.1：内置与自定义规则完全同构——同一列表、同一编辑器，无「内置」区分。
 // 行默认收起（概览 + 统计徽标 + 编辑/删除）；点「编辑」展开编辑区，避免整屏输入框。
-// 规则模型（v5.5）：卡片容器选择器 + 文字选择器数组（可多个）+ 时长选择器（可选）。
-// 模式：按屏蔽词过滤（match，默认，需至少一个文字选择器）/ 直接隐藏（hide）。
+// 规则模型：卡片容器选择器 + 文字选择器数组（可多个）+ 时长选择器（可选）。
+// 模式：按屏蔽词过滤（match，默认）/ 直接隐藏（hide）。
 import {
   INPUT_CLASS,
   SELECT_CLASS,
   RULE_ROW_CLASS,
   RULE_EDIT_CLASS,
-  RULE_BUILTIN_BADGE_CLASS,
   RULE_STATS_CLASS,
   CHECKBOX_INPUT_CLASS,
   CHECKBOX_LABEL_CLASS,
 } from '../../constants.js';
-import { BUILTIN_RULES } from '../../rules/builtin-rules.js';
 import { getRuleStats } from '../../engine/rule-stats.js';
 import { createSpanBtn } from '../input-row.js';
 
@@ -81,16 +79,14 @@ function createTextSelectorRow(container, value = '') {
 }
 
 /**
- * 规则行（内置与自定义同一套编辑器；内置行带「内置」标记）。默认收起。
+ * 规则行（v6.1：内置与自定义完全同构，无差别编辑器）。默认收起。
  * @param {{ id?: string, selector?: string, mode?: string, textSelectors?: string[], durationSelector?: string, enabled?: boolean }} rule
- * @param {{ builtin?: boolean }} [options]
  * @returns {HTMLElement}
  */
-export function createRuleRow(rule = {}, options = {}) {
+export function createRuleRow(rule = {}) {
   const row = document.createElement('div');
   row.className = RULE_ROW_CLASS;
   row.dataset.ruleId = rule.id || crypto.randomUUID();
-  row.dataset.kind = options.builtin ? 'builtin' : 'custom';
 
   // ---- 概览行（常显）----
   const enabledBox = document.createElement('input');
@@ -104,14 +100,6 @@ export function createRuleRow(rule = {}, options = {}) {
   enabledLabel.className = CHECKBOX_LABEL_CLASS;
   enabledLabel.title = '启用该规则';
   enabledLabel.textContent = '启用';
-
-  if (options.builtin) {
-    const badge = document.createElement('span');
-    badge.className = RULE_BUILTIN_BADGE_CLASS;
-    badge.textContent = '内置';
-    badge.title = '扩展自带的规则；点「编辑」可改选择器或删除，保存后生效';
-    row.appendChild(badge);
-  }
 
   const summarySpan = document.createElement('span');
   summarySpan.className = 'block_obj_rule_summary';
@@ -188,42 +176,39 @@ export function createRuleRow(rule = {}, options = {}) {
 }
 
 /**
- * 某作用域下的规则组。
- * 内置规则来源：用户持久化的 builtinRules（版本一致时），否则代码默认 BUILTIN_RULES；
- * 多作用域内置规则在每个所属标签页各渲染一行，收集时按当前标签页写单作用域。
- * @param {{ scope: string, rules: ReadonlyArray<Record<string, unknown>>, builtinRules: ReadonlyArray<Record<string, unknown>> | undefined }} params
- * @returns {{ container: HTMLElement, collect: () => { builtinRules: Array<Record<string, unknown>>, rules: Array<Record<string, unknown>>, invalidCount: number } }}
+ * 某作用域下的规则组（内置与自定义同一列表渲染）。
+ * @param {{ scope: string, rules: ReadonlyArray<Record<string, unknown>> }} params
+ * @returns {{ container: HTMLElement, collect: () => { rules: Array<Record<string, unknown>> } }}
  */
-export function createRulesGroup({ scope, rules, builtinRules }) {
+export function createRulesGroup({ scope, rules }) {
   const container = document.createElement('div');
 
-  const builtinSource = builtinRules ?? BUILTIN_RULES;
-  for (const rule of builtinSource) {
+  for (const rule of rules ?? []) {
     if (rule.scopes.includes(scope)) {
-      container.appendChild(createRuleRow(rule, { builtin: true }));
+      container.appendChild(createRuleRow(rule));
     }
   }
-  for (const rule of rules ?? []) {
-    container.appendChild(createRuleRow(rule));
-  }
-  const addBtn = createSpanBtn('添加规则', '新增一条本页面分类下的自定义规则', () => {
+  const addBtn = createSpanBtn('添加规则', '新增一条本页面分类下的规则', () => {
     container.appendChild(createRuleRow({}));
   });
   addBtn.classList.add('block_obj_rule_add_btn');
   container.appendChild(addBtn);
 
-  /** 行 → 规则对象；非法返回 null */
+  /** 行 → 规则对象；选择器为空视为放弃该行 */
   function collectRow(rowEl) {
     const selector = rowEl.querySelector('.block_obj_rule_selector_input').value.trim();
+    if (selector === '') {
+      return null;
+    }
+    if (!isCompilableSelector(selector)) {
+      console.warn('[bilibili_block] 规则选择器无法编译，仍会保存（引擎将跳过）:', selector);
+    }
     const enabledBox = rowEl.querySelector('input[type="checkbox"]');
     const mode = rowEl.querySelector('select')?.value ?? 'match';
     const textSelectors = [...rowEl.querySelectorAll('.block_obj_rule_textsel')]
       .map(input => input.value.trim())
       .filter(value => value !== '');
     const durationSelector = rowEl.querySelector('.block_obj_rule_duration_input').value.trim();
-    if (!isCompilableSelector(selector) || (mode === 'match' && textSelectors.length === 0)) {
-      return null;
-    }
     return {
       id: rowEl.dataset.ruleId,
       selector,
@@ -236,22 +221,14 @@ export function createRulesGroup({ scope, rules, builtinRules }) {
   }
 
   function collect() {
-    const builtinCollected = [];
-    const customCollected = [];
-    let invalidCount = 0;
+    const collected = [];
     for (const rowEl of container.getElementsByClassName(RULE_ROW_CLASS)) {
-      const collected = collectRow(rowEl);
-      if (!collected) {
-        invalidCount++;
-        continue;
-      }
-      if (rowEl.dataset.kind === 'builtin') {
-        builtinCollected.push(collected);
-      } else {
-        customCollected.push(collected);
+      const rule = collectRow(rowEl);
+      if (rule) {
+        collected.push(rule);
       }
     }
-    return { builtinRules: builtinCollected, rules: customCollected, invalidCount };
+    return { rules: collected };
   }
 
   return { container, collect };
