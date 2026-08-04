@@ -16,12 +16,12 @@ async function openPanel(page) {
   await expect(page.locator(WRAP)).toHaveClass(/block_obj_show_wrap/);
 }
 
-async function addTempKeyword(page, value, scope) {
-  await page.fill('#bilibiliConfig_keywordInput', value);
-  await page.selectOption('#bilibiliConfig_keywordScope', scope);
-  await page.check('#bilibiliConfig_keywordTemp');
+async function addTempKeyword(page, value) {
+  await page.locator('#bilibiliConfig_tab_search').click();
+  await page.fill('#bilibiliConfig_keywordInput_search', value);
+  await page.check('#bilibiliConfig_keywordTemp_search');
   await page
-    .locator("xpath=//input[@id='bilibiliConfig_keywordInput']/following::span[text()='添加'][1]")
+    .locator("xpath=//input[@id='bilibiliConfig_keywordInput_search']/following::span[text()='添加'][1]")
     .click();
 }
 
@@ -48,9 +48,9 @@ test.describe('临时屏蔽（仅标签页内存）', () => {
     const page = await context.newPage();
     await page.goto('https://search.bilibili.com/all?keyword=test');
     await openPanel(page);
-    await addTempKeyword(page, '广告', 'search');
+    await addTempKeyword(page, '广告');
     // chip 带临时徽标
-    await expect(page.locator('#bilibiliConfig_keywords .block_obj_child_badge_temp')).toHaveText('临时');
+    await expect(page.locator('#bilibiliConfig_keywords_search .block_obj_child_badge_temp')).toHaveText('临时');
     await page.locator("xpath=//span[@title='仅保存设置']").click();
 
     await expect
@@ -66,7 +66,7 @@ test.describe('临时屏蔽（仅标签页内存）', () => {
     const page = await context.newPage();
     await page.goto('https://search.bilibili.com/all?keyword=test');
     await openPanel(page);
-    await addTempKeyword(page, '广告', 'search');
+    await addTempKeyword(page, '广告');
     await page.locator("xpath=//span[@title='仅保存设置']").click();
     await expect
       .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
@@ -79,18 +79,17 @@ test.describe('临时屏蔽（仅标签页内存）', () => {
     await page.close();
   });
 
-  test('「清空临时词」立即解除屏蔽', async () => {
+  test('「清空临时词」立即解除屏蔽（仅本分类）', async () => {
     const page = await context.newPage();
     await page.goto('https://search.bilibili.com/all?keyword=test');
     await openPanel(page);
-    await addTempKeyword(page, '广告', 'search');
+    await addTempKeyword(page, '广告');
     await page.locator("xpath=//span[@title='仅保存设置']").click();
     await expect
       .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
 
-    // 关键字组的清空按钮是第二个
-    await page.locator("xpath=(//span[text()='清空临时词'])[2]").click();
+    await page.locator('#bilibiliConfig_pane_search').getByText('清空临时词', { exact: true }).click();
     await expect
       .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(false);

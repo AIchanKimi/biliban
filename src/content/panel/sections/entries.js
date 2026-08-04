@@ -1,21 +1,19 @@
-// 面板分节：词条（用户名 / 关键字各一组）。
-// 输入行 = 输入框 + 作用域下拉 + 「临时」勾选 + 添加/删除/清空/复制/展开。
+// 面板分节：词条组（某作用域标签页内的用户名或关键字一组）。
+// 作用域由所在标签页决定，输入行不再带作用域下拉；「临时」勾选保留。
 // 保存收集以 DOM chips 为准：持久词条入存储，临时词条回写 temp-store。
 import {
   FIELD_ID_PREFIX,
   INPUT_DIV_CLASS,
   INPUT_SPAN_CLASS,
   INPUT_CLASS,
-  SELECT_CLASS,
   SEPARATOR_LI_CLASS,
   SEPARATOR_TEXT_CLASS,
   LIST_DIV_CLASS,
   LIST_TEXTAREA_DIV_CLASS,
 } from '../../constants.js';
-import { SCOPES } from '../../config/scopes.js';
 import { REGEX_LITERAL_RE, parseRegexLiteral } from '../../config/serialize.js';
 import { stringToArray } from '../../util/string-to-array.js';
-import { seedEntries, extractEntriesFromEl, prependEntry, removeValues, removeTempChips } from '../chips.js';
+import { seedEntries, extractEntriesFromEl, prependEntry, removeValues } from '../chips.js';
 import { buttonClicked, createSpanBtn, toggleList, copyToClipboard } from '../input-row.js';
 
 /**
@@ -52,24 +50,20 @@ function separatorLi(label) {
 /**
  * @param {{
  *   type: 'keyword' | 'username',
+ *   scope: string,
  *   sectionLabel: string,
  *   placeholder: string,
  *   liClassname: string,
  *   entries: ReadonlyArray<{ value: string, scopes: string[] }>,
  *   tempEntries: ReadonlyArray<{ value: string, scopes: string[] }>,
- *   onTempCleared: () => void,
  * }} params
- * @returns {{
- *   lis: HTMLElement[],
- *   collect: () => { persistent: Array<{ value: string, scopes: string[] }>, temp: Array<{ value: string, scopes: string[] }> },
- * }}
+ * @returns {{ lis: HTMLElement[], collect: () => { persistent: Array<{ value: string, scopes: string[] }>, temp: Array<{ value: string, scopes: string[] }> } }}
  */
-export function createEntriesSection(params) {
-  const { type, sectionLabel, placeholder, liClassname, entries, tempEntries, onTempCleared } = params;
-  const inputId = FIELD_ID_PREFIX + type + 'Input';
-  const scopeId = FIELD_ID_PREFIX + type + 'Scope';
-  const tempId = FIELD_ID_PREFIX + type + 'Temp';
-  const listId = FIELD_ID_PREFIX + (type === 'keyword' ? 'keywords' : 'usernames');
+export function createEntriesGroup(params) {
+  const { type, scope, sectionLabel, placeholder, liClassname, entries, tempEntries } = params;
+  const inputId = `${FIELD_ID_PREFIX}${type}Input_${scope}`;
+  const tempId = `${FIELD_ID_PREFIX}${type}Temp_${scope}`;
+  const listId = `${FIELD_ID_PREFIX}${type === 'keyword' ? 'keywords' : 'usernames'}_${scope}`;
 
   // ---- 输入行 ----
   const inputLi = document.createElement('li');
@@ -86,17 +80,6 @@ export function createEntriesSection(params) {
   input.placeholder = placeholder;
   input.title = '同时输入多个时以半角逗号分隔；正则格式 /Pattern/Modifier';
   inputSpan.appendChild(input);
-
-  const scopeSelect = document.createElement('select');
-  scopeSelect.id = scopeId;
-  scopeSelect.className = SELECT_CLASS;
-  scopeSelect.title = '作用域：词条在哪些页面生效';
-  for (const scope of SCOPES) {
-    const option = document.createElement('option');
-    option.value = scope.value;
-    option.textContent = scope.label;
-    scopeSelect.appendChild(option);
-  }
 
   const tempCheckbox = document.createElement('input');
   tempCheckbox.type = 'checkbox';
@@ -117,7 +100,6 @@ export function createEntriesSection(params) {
     if (!textValue) {
       return false;
     }
-    const scopes = [scopeSelect.value];
     const temp = tempCheckbox.checked;
     const values = stringToArray(textValue).filter(value => isValidNewEntry(value, type));
     if (values.length === 0) {
@@ -125,7 +107,7 @@ export function createEntriesSection(params) {
     }
     let inserted = false;
     for (const value of values) {
-      if (prependEntry(listEl, { value, scopes, temp })) {
+      if (prependEntry(listEl, { value, scopes: [scope], temp })) {
         inserted = true;
       }
     }
@@ -179,7 +161,6 @@ export function createEntriesSection(params) {
   });
 
   inputDiv.appendChild(inputSpan);
-  inputDiv.appendChild(scopeSelect);
   inputDiv.appendChild(tempCheckbox);
   inputDiv.appendChild(tempLabel);
   inputDiv.appendChild(addBtn);
@@ -195,12 +176,6 @@ export function createEntriesSection(params) {
   const listDiv = document.createElement('div');
   listDiv.className = LIST_DIV_CLASS;
   listDiv.appendChild(listEl);
-  const clearTempBtn = createSpanBtn('清空临时词', '立即清空本组全部临时词条（仅本标签页）', () => {
-    removeTempChips(listEl);
-    onTempCleared();
-    buttonClicked(clearTempBtn, '已清空');
-  });
-  listDiv.appendChild(clearTempBtn);
   listLi.appendChild(listDiv);
 
   function collect() {

@@ -17,7 +17,7 @@ async function openPanel(page) {
   await expect(page.locator(WRAP)).toHaveClass(/block_obj_show_wrap/);
 }
 
-test.describe('设置面板 v2 与悬浮触发器', () => {
+test.describe('设置面板 v2（标签页式管理）', () => {
   let context, toolsPage;
 
   test.beforeAll(async () => {
@@ -40,19 +40,37 @@ test.describe('设置面板 v2 与悬浮触发器', () => {
     await page.close();
   });
 
-  test('关键字 + 作用域下拉 → 添加 → 仅保存：chip 徽标、落盘 v2 形状', async () => {
+  test('六个分类标签齐全，默认停在「全局」', async () => {
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/');
+    await openPanel(page);
+    for (const [scope, label] of [['global', '全局'], ['home', '首页'], ['video', '视频页'], ['search', '搜索'], ['dynamics', '动态'], ['space', '空间']]) {
+      await expect(page.locator(`#bilibiliConfig_tab_${scope}`)).toHaveText(label);
+    }
+    await expect(page.locator('#bilibiliConfig_tab_global')).toHaveClass(/block_obj_tab_active/);
+    await expect(page.locator('#bilibiliConfig_pane_global')).toBeVisible();
+    await expect(page.locator('#bilibiliConfig_pane_search')).not.toBeVisible();
+    await page.close();
+  });
+
+  test('切到「搜索」添加关键字 → 仅保存：落盘 scopes=[search]，切换标签不丢未保存编辑', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
 
-    await page.fill('#bilibiliConfig_keywordInput', '测试关键字');
-    await page.selectOption('#bilibiliConfig_keywordScope', 'search');
+    await page.locator('#bilibiliConfig_tab_search').click();
+    await expect(page.locator('#bilibiliConfig_pane_search')).toBeVisible();
+
+    await page.fill('#bilibiliConfig_keywordInput_search', '测试关键字');
     await page
-      .locator("xpath=//input[@id='bilibiliConfig_keywordInput']/following::span[text()='添加'][1]")
+      .locator("xpath=//input[@id='bilibiliConfig_keywordInput_search']/following::span[text()='添加'][1]")
       .click();
-    const chip = page.locator('#bilibiliConfig_keywords .block_obj_child_span').first();
-    await expect(chip.locator('.block_obj_child_text')).toContainText('测试关键字');
-    await expect(chip.locator('.block_obj_child_badge')).toHaveText('搜索');
+    await expect(page.locator('#bilibiliConfig_keywords_search')).toContainText('测试关键字');
+
+    // 切走再切回：未保存编辑仍在（所有分类页常驻 DOM，仅切换显隐）
+    await page.locator('#bilibiliConfig_tab_global').click();
+    await page.locator('#bilibiliConfig_tab_search').click();
+    await expect(page.locator('#bilibiliConfig_keywords_search')).toContainText('测试关键字');
 
     // 用 title 锚定（闪烁期间 textContent 变化，text() 定位器会跟丢）
     const onlySave = page.locator("xpath=//span[@title='仅保存设置']");
@@ -85,31 +103,30 @@ test.describe('设置面板 v2 与悬浮触发器', () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
-    await page.fill('#bilibiliConfig_keywordInput', '/一个很长的正则,含逗号/');
+    await page.fill('#bilibiliConfig_keywordInput_global', '/一个很长的正则,含逗号/');
     await page
-      .locator("xpath=//input[@id='bilibiliConfig_keywordInput']/following::span[text()='添加'][1]")
+      .locator("xpath=//input[@id='bilibiliConfig_keywordInput_global']/following::span[text()='添加'][1]")
       .click();
-    const chipText = page.locator('#bilibiliConfig_keywords .block_obj_child_text').first();
+    const chipText = page.locator('#bilibiliConfig_keywords_global .block_obj_child_text').first();
     await expect(chipText).toHaveClass(/block_obj_child_green/);
     await expect(chipText).toHaveAttribute('title', '/一个很长的正则,含逗号/');
     await expect(chipText).toContainText(' ... ');
     await page.close();
   });
 
-  test('规则编辑器：添加规则行 → 保存 → 落盘', async () => {
+  test('规则编辑器：在当前分类添加规则行 → 保存 → 落盘（scopes 取当前分类）', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
-    await page.locator("xpath=//span[text()='添加规则']").click();
-    const row = page.locator('#bilibiliConfig_rulesList .block_obj_rule_row').last();
+    await page.locator('#bilibiliConfig_rules_global').getByText('添加规则', { exact: true }).click();
+    const row = page.locator('#bilibiliConfig_rules_global .block_obj_rule_row').last();
     await row.locator('input[type="text"]').first().fill('.my-new-card');
-    await row.locator('select').first().selectOption('search');
-    await row.locator('select').last().selectOption('hide');
+    await row.locator('select').selectOption('hide');
     await page.locator("xpath=//span[@title='仅保存设置']").click();
     await expect
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).rules)
       .toEqual([
-        expect.objectContaining({ selector: '.my-new-card', scopes: ['search'], mode: 'hide', enabled: true }),
+        expect.objectContaining({ selector: '.my-new-card', scopes: ['global'], mode: 'hide', enabled: true }),
       ]);
     await page.close();
   });

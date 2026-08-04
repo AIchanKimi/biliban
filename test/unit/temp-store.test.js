@@ -4,7 +4,10 @@ import {
   addTempEntries,
   removeTempEntry,
   clearTempEntries,
+  removeTempEntriesByScope,
   getEffectiveEntries,
+  mergeTempEntries,
+  setTempEntries,
 } from '../../src/content/config/temp-store.js';
 
 describe('temp-store（标签页内存临时词条）', () => {
@@ -49,6 +52,35 @@ describe('temp-store（标签页内存临时词条）', () => {
     addTempEntries([{ value: 'a', type: 'keyword', scopes: ['global'] }]);
     clearTempEntries();
     expect(getTempEntries()).toEqual([]);
+  });
+
+  test('setTempEntries：整体替换（面板保存语义）', () => {
+    addTempEntries([{ value: 'old', type: 'keyword', scopes: ['global'] }]);
+    setTempEntries([{ value: 'new', type: 'username', scopes: ['search'] }]);
+    expect(getTempEntries()).toEqual([{ value: 'new', type: 'username', scopes: ['search'] }]);
+  });
+
+  test('removeTempEntriesByScope：按分类清空（标签页「清空临时词」）', () => {
+    addTempEntries([
+      { value: 'a', type: 'keyword', scopes: ['search'] },
+      { value: 'b', type: 'username', scopes: ['search'] },
+      { value: 'c', type: 'keyword', scopes: ['home'] },
+    ]);
+    removeTempEntriesByScope('search');
+    expect(getTempEntries()).toEqual([{ value: 'c', type: 'keyword', scopes: ['home'] }]);
+  });
+
+  test('mergeTempEntries：运行时配置合并临时词条', () => {
+    addTempEntries([{ value: '临', type: 'keyword', scopes: ['search'] }]);
+    const runtime = {
+      enable: true,
+      usernames: [{ value: 'u', scopes: ['global'] }],
+      keywords: [{ value: 'k', scopes: ['global'] }],
+    };
+    const merged = mergeTempEntries(runtime);
+    expect(merged.keywords.map(e => e.value)).toEqual(['k', '临']);
+    expect(merged.usernames.map(e => e.value)).toEqual(['u']);
+    expect(runtime.keywords.length).toBe(1); // 不修改入参
   });
 
   test('getTempEntries 返回副本（外部修改不影响内部）', () => {

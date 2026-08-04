@@ -52,6 +52,10 @@ export const CANCEL_BUTTON_CLASS = 'block_obj_button block_obj_cancel_button';
 export const BUTTON_CLICKED_CLASS = 'block_obj_button_clicked';
 
 // v5 面板新控件类名
+export const TAB_BAR_CLASS = 'block_obj_tab_bar';
+export const TAB_CLASS = 'block_obj_tab';
+export const TAB_ACTIVE_CLASS = 'block_obj_tab block_obj_tab_active';
+export const SCOPE_PANE_CLASS = 'block_obj_scope_pane';
 export const SELECT_CLASS = 'block_obj_select';
 export const NUMBER_INPUT_CLASS = 'block_obj_input block_obj_number_input';
 export const CHIP_BADGE_CLASS = 'block_obj_child_badge';

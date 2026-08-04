@@ -48,11 +48,19 @@ export function clearTempEntries() {
 }
 
 /**
- * 按类型清空（面板「清空临时词」按组作用）。
+ * 按类型清空。
  * @param {'keyword' | 'username'} type
  */
 export function removeTempEntriesByType(type) {
   tempEntries = tempEntries.filter(entry => entry.type !== type);
+}
+
+/**
+ * 按作用域清空（面板标签页内的「清空临时词」：该分类下用户名与关键字一起清）。
+ * @param {string} scope
+ */
+export function removeTempEntriesByScope(scope) {
+  tempEntries = tempEntries.filter(entry => !entry.scopes.includes(scope));
 }
 
 /**

@@ -7,11 +7,9 @@ import {
   CHIP_GREEN_CLASS,
   CHIP_DEL_CLASS,
   CHIP_TRUNCATE_LIMIT,
-  CHIP_BADGE_CLASS,
   CHIP_TEMP_BADGE_CLASS,
 } from '../constants.js';
 import { REGEX_LITERAL_RE } from '../config/serialize.js';
-import { scopeLabel } from '../config/scopes.js';
 
 /**
  * @typedef {{ value: string, scopes: string[], temp?: boolean }} ChipEntry
@@ -38,14 +36,7 @@ export function createChip(entry) {
   }
   childSpan.appendChild(textSpan);
 
-  const isGlobalOnly = scopes.length === 1 && scopes[0] === 'global';
-  if (!isGlobalOnly) {
-    const scopeBadge = document.createElement('span');
-    scopeBadge.className = CHIP_BADGE_CLASS;
-    scopeBadge.textContent = scopes.map(scopeLabel).join('·');
-    scopeBadge.title = '仅作用于：' + scopeBadge.textContent;
-    childSpan.appendChild(scopeBadge);
-  }
+  // 作用域由所在标签页表达，chip 不再重复显示；仅临时词条加徽标
   if (temp) {
     const tempBadge = document.createElement('span');
     tempBadge.className = CHIP_TEMP_BADGE_CLASS;

@@ -50,6 +50,7 @@
         "src/content/panel/sections/general.js",
         "src/content/panel/sections/entries.js",
         "src/content/panel/sections/rules.js",
+        "src/content/panel/sections/scope-pane.js",
         "src/content/resolver/username-resolver.js",
         "src/content/rules/builtin-rules.js",
         "src/content/util/date.js",

@@ -1,11 +1,14 @@
-// 设置面板主体（v5 分节重构）。保留 v4 壳行为：
+// 设置面板主体（v5.1 标签页式管理）。保留壳行为：
 //   - 520px 固定面板，bottom 6vh，right 0↔-530px 0.8s 滑入滑出
 //   - 底部三按钮：保存并关闭 / 仅保存（闪「已保存」1s）/ 取消（收起后 800ms 按上次已保存重建）
 //   - rebuild 用于「取消」与多标签页远端同步
+// 结构：通用（总开关/时长）→ 分类标签栏（全局/首页/视频页/搜索/动态/空间）
+//       → 每个分类一个面板页：用户名组 + 关键字组 + 自定义规则组 + 清空临时词。
 // 收集语义：临时词条回写 temp-store（不落盘），持久词条进存储对象。
 import {
   BLOCK_OBJ_ID,
   WRAP_ID,
+  FIELD_ID_PREFIX,
   WRAP_DIV_CLASS,
   WRAP_SHOW_CLASS,
   WRAP_HIDDEN_CLASS,
@@ -15,14 +18,17 @@ import {
   CANCEL_BUTTON_CLASS,
   SAVE_FLASH_MS,
   CANCEL_REBUILD_MS,
-  LI_USERNAME_CLASS,
-  LI_KEYWORD_CLASS,
+  SEPARATOR_LI_CLASS,
+  SEPARATOR_TEXT_CLASS,
+  TAB_BAR_CLASS,
+  TAB_CLASS,
+  TAB_ACTIVE_CLASS,
 } from '../constants.js';
 import { CONFIG_VERSION } from '../config/defaults.js';
-import { getTempEntries, setTempEntries, removeTempEntriesByType } from '../config/temp-store.js';
+import { SCOPES } from '../config/scopes.js';
+import { getTempEntries, setTempEntries, removeTempEntriesByScope } from '../config/temp-store.js';
 import { createGeneralSection } from './sections/general.js';
-import { createEntriesSection } from './sections/entries.js';
-import { createRulesSection } from './sections/rules.js';
+import { createScopePane } from './sections/scope-pane.js';
 import { SAVE_FLASH_TEXT } from './panel-text.js';
 
 /**
@@ -38,12 +44,17 @@ export function createPanel(deps) {
   let config = { ...initialConfig };
   let wrapDiv = null;
   let ulNode = null;
-  let sections = null;
+  let generalSection = null;
+  let panes = [];
+  let tabButtons = [];
+  let activeScope = 'global';
   let saveTimer = null;
   let cancelTimer = null;
   let display = false;
 
-  const tempByType = type => getTempEntries().filter(entry => entry.type === type);
+  const tempByScopeAndType = (scope, type) =>
+    getTempEntries().filter(entry => entry.type === type && entry.scopes.includes(scope));
+  const entriesByScope = (list, scope) => (list ?? []).filter(entry => entry.scopes.includes(scope));
 
   function build() {
     wrapDiv = document.createElement('div');
@@ -58,40 +69,57 @@ export function createPanel(deps) {
     ulNode.className = UL_NODE_CLASS;
     mainFieldset.appendChild(ulNode);
 
-    const general = createGeneralSection(config);
-    const usernames = createEntriesSection({
-      type: 'username',
-      sectionLabel: '屏蔽用户名（精确匹配）：',
-      placeholder: ' UP主名称，多个以半角逗号分隔 ',
-      liClassname: LI_USERNAME_CLASS,
-      entries: config.usernames,
-      tempEntries: tempByType('username'),
-      onTempCleared: () => {
-        removeTempEntriesByType('username');
-        onTempCleared();
-      },
-    });
-    const keywords = createEntriesSection({
-      type: 'keyword',
-      sectionLabel: '屏蔽关键字或正则（标题匹配）：',
-      placeholder: ' 正则表达式格式: /Pattern/Modifier ',
-      liClassname: LI_KEYWORD_CLASS,
-      entries: config.keywords,
-      tempEntries: tempByType('keyword'),
-      onTempCleared: () => {
-        removeTempEntriesByType('keyword');
-        onTempCleared();
-      },
-    });
-    const rules = createRulesSection(config.rules);
-    sections = { general, usernames, keywords, rules };
-
-    for (const section of Object.values(sections)) {
-      for (const li of section.lis) {
-        ulNode.appendChild(li);
-      }
+    // ---- 通用 ----
+    generalSection = createGeneralSection(config);
+    for (const li of generalSection.lis) {
+      ulNode.appendChild(li);
     }
 
+    // ---- 分类标签栏 ----
+    const tabSeparator = document.createElement('li');
+    tabSeparator.className = SEPARATOR_LI_CLASS;
+    const tabSeparatorText = document.createElement('span');
+    tabSeparatorText.className = SEPARATOR_TEXT_CLASS;
+    tabSeparatorText.textContent = '按页面分类管理（「全局」中的词条处处生效）：';
+    tabSeparator.appendChild(tabSeparatorText);
+    ulNode.appendChild(tabSeparator);
+
+    const tabBarLi = document.createElement('li');
+    const tabBar = document.createElement('div');
+    tabBar.className = TAB_BAR_CLASS;
+    tabButtons = SCOPES.map(scope => {
+      const tab = document.createElement('span');
+      tab.id = FIELD_ID_PREFIX + 'tab_' + scope.value;
+      tab.textContent = scope.label;
+      tab.title = '管理「' + scope.label + '」分类下的屏蔽内容';
+      tab.className = scope.value === activeScope ? TAB_ACTIVE_CLASS : TAB_CLASS;
+      tab.addEventListener('click', () => switchTab(scope.value));
+      tabBar.appendChild(tab);
+      return { scope: scope.value, tab };
+    });
+    tabBarLi.appendChild(tabBar);
+    ulNode.appendChild(tabBarLi);
+
+    // ---- 每个分类一个面板页 ----
+    panes = SCOPES.map(({ value: scope }) => {
+      const pane = createScopePane({
+        scope,
+        usernames: entriesByScope(config.usernames, scope),
+        keywords: entriesByScope(config.keywords, scope),
+        tempUsernames: tempByScopeAndType(scope, 'username'),
+        tempKeywords: tempByScopeAndType(scope, 'keyword'),
+        rules: entriesByScope(config.rules, scope),
+        onTempCleared: () => {
+          removeTempEntriesByScope(scope);
+          onTempCleared();
+        },
+      });
+      pane.el.style.display = scope === activeScope ? '' : 'none';
+      ulNode.appendChild(pane.el);
+      return { scope, pane };
+    });
+
+    // ---- 底部三按钮 ----
     const saveButton = createFooterBtn(SAVE_BUTTON_CLASS, '保存并关闭', '保存设置并关闭设置窗口', () => {
       toggle();
       save(saveButton);
@@ -125,6 +153,16 @@ export function createPanel(deps) {
     document.body.appendChild(wrapDiv);
   }
 
+  function switchTab(scope) {
+    activeScope = scope;
+    for (const { scope: s, tab } of tabButtons) {
+      tab.className = s === scope ? TAB_ACTIVE_CLASS : TAB_CLASS;
+    }
+    for (const { scope: s, pane } of panes) {
+      pane.el.style.display = s === scope ? '' : 'none';
+    }
+  }
+
   function createFooterBtn(classname, label, title, callback) {
     const btn = document.createElement('span');
     btn.textContent = label;
@@ -134,33 +172,36 @@ export function createPanel(deps) {
     return btn;
   }
 
-  /** DOM → { storage 存储形状, temp 临时词条, invalidCount } */
+  /** DOM → { storage 存储形状, temp 临时词条, invalidCount }（遍历全部分类页） */
   function collectFromDom() {
-    const general = sections.general.collect();
-    const usernames = sections.usernames.collect();
-    const keywords = sections.keywords.collect();
-    const rulesResult = sections.rules.collect();
+    const general = generalSection.collect();
+    const usernames = [];
+    const keywords = [];
+    const temp = [];
+    const rules = [];
+    let invalidCount = 0;
+    for (const { pane } of panes) {
+      const result = pane.collect();
+      usernames.push(...result.usernames.persistent);
+      keywords.push(...result.keywords.persistent);
+      temp.push(
+        ...result.usernames.temp.map(entry => ({ ...entry, type: 'username' })),
+        ...result.keywords.temp.map(entry => ({ ...entry, type: 'keyword' }))
+      );
+      rules.push(...result.rules);
+      invalidCount += result.invalidCount;
+    }
     return {
-      storage: {
-        version: CONFIG_VERSION,
-        enable: general.enable,
-        duration: general.duration,
-        usernames: usernames.persistent,
-        keywords: keywords.persistent,
-        rules: rulesResult.rules,
-      },
-      temp: [
-        ...usernames.temp.map(entry => ({ ...entry, type: 'username' })),
-        ...keywords.temp.map(entry => ({ ...entry, type: 'keyword' })),
-      ],
-      invalidCount: rulesResult.invalidCount,
+      storage: { version: CONFIG_VERSION, enable: general.enable, duration: general.duration, usernames, keywords, rules },
+      temp,
+      invalidCount,
     };
   }
 
   async function save(clickedBtn = null) {
     const { storage, temp, invalidCount } = collectFromDom();
     if (invalidCount > 0) {
-      console.error('[bilibili_block] 存在无效自定义规则（选择器无法编译，或匹配模式缺少标题/UP主选择器），已跳过:', invalidCount);
+      console.error('[bilibili_block] 存在无效自定义规则（选择器无法编译，或过滤模式缺少标题/UP主选择器），已跳过:', invalidCount);
       if (clickedBtn) {
         clickedBtn.title = '部分规则无效已跳过';
       }

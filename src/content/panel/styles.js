@@ -178,6 +178,35 @@ export const LIB_STYLE = `
   .block_obj_li_hide {
     display: none;
   }
+  .block_obj_tab_bar {
+    margin-top: 5px;
+    white-space: nowrap;
+  }
+  .block_obj_tab {
+    background-color: #3D3D3D;
+    border-radius: 3px 3px 0 0;
+    border: 1px solid #555;
+    color: #D3D3D3;
+    cursor: pointer;
+    display: inline-block;
+    margin-right: 3px;
+    padding: 2px 8px;
+    user-select: none;
+  }
+  .block_obj_tab:hover {
+    border-color: #00A1D6;
+  }
+  .block_obj_tab_active {
+    background-color: #00A1D6;
+    border-color: #00A1D6;
+    color: #FFF;
+  }
+  .block_obj_scope_pane {
+    border: 1px dotted #444;
+    border-radius: 3px;
+    margin-top: 4px;
+    padding: 2px 6px;
+  }
   .block_obj_rule_row {
     border: 1px dotted #555;
     border-radius: 3px;

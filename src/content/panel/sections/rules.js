@@ -1,23 +1,24 @@
-// 面板分节：自定义规则编辑器。
+// 面板分节：自定义规则组（归属于某个作用域标签页，规则本身不再选作用域）。
 // B 站改版后可在此直接改选择器，无需修改扩展代码。
-// 规则 = CSS 选择器 + 作用域 + 模式（按词条匹配 / 直接隐藏）+ 可选标题/UP主选择器。
-// 收集时校验：选择器必须可编译；match 模式必须至少提供标题或 UP主选择器之一。
+// 模式两档（原「按词条匹配/直接隐藏」改名）：
+//   按屏蔽词过滤 —— 选择器定位的卡片按本页面词条过滤（默认）
+//   直接隐藏     —— 命中选择器即隐藏，不检查词条
+// 收集时校验：选择器必须可编译；过滤模式必须至少提供标题或 UP主选择器之一。
 import {
-  FIELD_ID_PREFIX,
   INPUT_CLASS,
   SELECT_CLASS,
-  SEPARATOR_LI_CLASS,
-  SEPARATOR_TEXT_CLASS,
-  LIST_DIV_CLASS,
   RULE_ROW_CLASS,
   RULE_MORE_CLASS,
   CHECKBOX_INPUT_CLASS,
   CHECKBOX_LABEL_CLASS,
 } from '../../constants.js';
-import { SCOPES } from '../../config/scopes.js';
 import { createSpanBtn } from '../input-row.js';
 
-const RULES_LIST_ID = FIELD_ID_PREFIX + 'rulesList';
+/** 模式下拉选项：value → 显示文案 */
+export const MODE_LABELS = Object.freeze([
+  Object.freeze({ value: 'match', label: '按屏蔽词过滤' }),
+  Object.freeze({ value: 'hide', label: '直接隐藏' }),
+]);
 
 /**
  * @param {string} selector
@@ -35,20 +36,6 @@ export function isCompilableSelector(selector) {
   }
 }
 
-function scopeSelect(selected) {
-  const select = document.createElement('select');
-  select.className = SELECT_CLASS;
-  select.title = '作用域：规则在哪些页面生效';
-  for (const scope of SCOPES) {
-    const option = document.createElement('option');
-    option.value = scope.value;
-    option.textContent = scope.label;
-    option.selected = selected === scope.value;
-    select.appendChild(option);
-  }
-  return select;
-}
-
 function textInput(value, placeholder, title) {
   const input = document.createElement('input');
   input.type = 'text';
@@ -60,7 +47,7 @@ function textInput(value, placeholder, title) {
 }
 
 /**
- * @param {{ id?: string, selector?: string, scopes?: string[], mode?: string, titleSelector?: string, userSelector?: string, enabled?: boolean }} rule
+ * @param {{ id?: string, selector?: string, mode?: string, titleSelector?: string, userSelector?: string, enabled?: boolean }} rule
  * @returns {HTMLElement}
  */
 export function createRuleRow(rule = {}) {
@@ -77,18 +64,20 @@ export function createRuleRow(rule = {}) {
   enabledLabel.title = '启用该规则';
   enabledLabel.textContent = '启用';
 
-  const selectorInput = textInput(rule.selector ?? '', 'CSS 选择器（卡片容器）', '目标卡片容器选择器，如 .bili-video-card');
-  const scopes = Array.isArray(rule.scopes) && rule.scopes.length > 0 ? rule.scopes : ['global'];
-  const scopeSel = scopeSelect(scopes[0]);
+  const selectorInput = textInput(rule.selector ?? '', '卡片容器选择器', '目标卡片容器选择器，如 .bili-video-card');
 
   const modeSel = document.createElement('select');
   modeSel.className = SELECT_CLASS;
-  modeSel.title = '按词条匹配：命中用户名/关键字才隐藏；直接隐藏：选中即隐藏';
-  for (const [value, label] of [['match', '按词条匹配'], ['hide', '直接隐藏']]) {
+  for (const { value, label } of MODE_LABELS) {
     const option = document.createElement('option');
     option.value = value;
     option.textContent = label;
     option.selected = rule.mode === value;
+    if (value === 'match') {
+      option.title = '选择器定位的卡片按本页面用户名/关键字词条过滤';
+    } else {
+      option.title = '命中选择器的元素直接隐藏，不检查词条';
+    }
     modeSel.appendChild(option);
   }
 
@@ -100,7 +89,7 @@ export function createRuleRow(rule = {}) {
 
   const moreDiv = document.createElement('div');
   moreDiv.className = RULE_MORE_CLASS;
-  const titleInput = textInput(rule.titleSelector ?? '', '标题选择器（可选）', '卡片内标题元素选择器；match 模式至少填写标题或 UP主选择器之一');
+  const titleInput = textInput(rule.titleSelector ?? '', '标题选择器（可选）', '卡片内标题元素选择器；过滤模式至少填写标题或 UP主选择器之一');
   const userInput = textInput(rule.userSelector ?? '', 'UP主选择器（可选）', '卡片内 UP主元素选择器');
   moreDiv.appendChild(titleInput);
   moreDiv.appendChild(userInput);
@@ -114,7 +103,6 @@ export function createRuleRow(rule = {}) {
   row.appendChild(enabledBox);
   row.appendChild(enabledLabel);
   row.appendChild(selectorInput);
-  row.appendChild(scopeSel);
   row.appendChild(modeSel);
   row.appendChild(moreBtn);
   row.appendChild(delBtn);
@@ -123,41 +111,28 @@ export function createRuleRow(rule = {}) {
 }
 
 /**
- * @param {ReadonlyArray<Record<string, unknown>>} rules
- * @returns {{ lis: HTMLElement[], collect: () => { rules: Array<Record<string, unknown>>, invalidCount: number } }}
+ * 某作用域下的规则组。
+ * @param {{ scope: string, rules: ReadonlyArray<Record<string, unknown>> }} params
+ * @returns {{ container: HTMLElement, collect: () => { rules: Array<Record<string, unknown>>, invalidCount: number } }}
  */
-export function createRulesSection(rules) {
-  const separatorLi = document.createElement('li');
-  separatorLi.className = SEPARATOR_LI_CLASS;
-  const separatorText = document.createElement('span');
-  separatorText.className = SEPARATOR_TEXT_CLASS;
-  separatorText.textContent = '自定义规则（目标元素编辑）：';
-  separatorLi.appendChild(separatorText);
-
-  const listLi = document.createElement('li');
-  const listDiv = document.createElement('div');
-  listDiv.className = LIST_DIV_CLASS;
-  const rulesList = document.createElement('div');
-  rulesList.id = RULES_LIST_ID;
+export function createRulesGroup({ scope, rules }) {
+  const container = document.createElement('div');
   for (const rule of rules ?? []) {
-    rulesList.appendChild(createRuleRow(rule));
+    container.appendChild(createRuleRow(rule));
   }
-  const addBtn = createSpanBtn('添加规则', '新增一条自定义规则', () => {
-    rulesList.appendChild(createRuleRow({}));
+  const addBtn = createSpanBtn('添加规则', '新增一条本页面分类下的自定义规则', () => {
+    container.appendChild(createRuleRow({}));
   });
-  listDiv.appendChild(rulesList);
-  listDiv.appendChild(addBtn);
-  listLi.appendChild(listDiv);
+  container.appendChild(addBtn);
 
   function collect() {
     const collected = [];
     let invalidCount = 0;
-    for (const row of rulesList.getElementsByClassName(RULE_ROW_CLASS)) {
+    for (const row of container.getElementsByClassName(RULE_ROW_CLASS)) {
       const selector = row.querySelector('input[type="text"]').value.trim();
       const enabledBox = row.querySelector('input[type="checkbox"]');
-      const selects = row.querySelectorAll('select');
-      const scope = selects[0]?.value ?? 'global';
-      const mode = selects[1]?.value ?? 'match';
+      const modeSel = row.querySelector('select');
+      const mode = modeSel?.value ?? 'match';
       const [titleInput, userInput] = row.querySelectorAll(`.${RULE_MORE_CLASS} input`);
       const titleSelector = titleInput ? titleInput.value.trim() : '';
       const userSelector = userInput ? userInput.value.trim() : '';
@@ -178,5 +153,5 @@ export function createRulesSection(rules) {
     return { rules: collected, invalidCount };
   }
 
-  return { lis: [separatorLi, listLi], collect };
+  return { container, collect };
 }
