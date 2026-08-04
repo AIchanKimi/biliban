@@ -1,9 +1,9 @@
 {
   "name": "biliban",
-  "version": "4.8.0",
+  "version": "5.0.0",
   "private": true,
   "type": "module",
-  "description": "哔哩哔哩 - 屏蔽指定内容（浏览器扩展，替代油猴脚本 v4.8.0）",
+  "description": "哔哩哔哩 - 屏蔽指定内容（浏览器扩展；源自油猴脚本 v4.8.0，v5 按需重构）",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "test": "bun test test/unit/",
