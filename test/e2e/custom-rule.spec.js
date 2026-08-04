@@ -48,6 +48,33 @@ test.describe('自定义规则（目标元素编辑）', () => {
     await page.close();
   });
 
+  test('durationSelector 扩展点：规则指定时长元素后按词条屏蔽，缺省探测找不到则不屏蔽', async () => {
+    const extensionId = await getExtensionId(context);
+    const toolsPage = await openToolsPage(context, extensionId);
+    // fixture 两张卡的时长文本都在非叶子节点（启发式探测找不到）
+    await seedConfig(toolsPage, {
+      version: 4,
+      enable: true,
+      words: [],
+      durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
+      rules: [
+        { id: 'r-dursel', selector: '.dur-card', scopes: ['home'], mode: 'match', titleSelector: '.t', userSelector: '', durationSelector: '.dur', enabled: true },
+        { id: 'r-nodursel', selector: '.dur-card-nosel', scopes: ['home'], mode: 'match', titleSelector: '.t', userSelector: '', durationSelector: '', enabled: true },
+      ],
+    });
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/');
+    // 有时长选择器：找到 0:45 < 60s → 屏蔽
+    await expect
+      .poll(() => page.locator('[data-test="card-dursel"]').evaluate(el => el.classList.contains('block_obj_none')))
+      .toBe(true);
+    // 无时长选择器：启发式找不到（非叶子）→ 不屏蔽
+    await page.waitForSelector('[data-test="card-nodursel"]');
+    await page.waitForTimeout(600);
+    await expect(page.locator('[data-test="card-nodursel"]')).not.toHaveClass(new RegExp(NONE));
+    await page.close();
+  });
+
   test('禁用 mode:hide 规则后解除隐藏', async () => {
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);

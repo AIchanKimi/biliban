@@ -1,14 +1,12 @@
 // 面板分节：规则组（归属某作用域标签页）。
-// 组成：内置规则（只读展示 + 命中统计）→ 自定义规则（可编辑）→ 添加按钮。
+// 组成：内置规则行（可编辑/可删除，保存后写回 builtinRules）→ 自定义规则行 → 添加按钮。
 // 命中统计（rule-stats）让用户识别失效/无用规则：找到 N · 隐藏 M，有命中高亮。
-// 自定义规则两种模式：
-//   按屏蔽词过滤（match，默认）—— 选择器定位卡片，按本页面词条过滤
-//   直接隐藏（hide）—— 命中选择器即隐藏，不检查词条
+// 规则模式：按屏蔽词过滤（match，默认）/ 直接隐藏（hide）。
+// 选择器字段可扩展（v5.3）：标题 / UP主 / 时长，「更多」区按需追加新字段即可。
 import {
   INPUT_CLASS,
   SELECT_CLASS,
   RULE_ROW_CLASS,
-  RULE_BUILTIN_ROW_CLASS,
   RULE_BUILTIN_BADGE_CLASS,
   RULE_STATS_CLASS,
   RULE_MORE_CLASS,
@@ -62,52 +60,20 @@ function createStatsBadge(ruleId) {
   badge.dataset.ruleId = ruleId;
   const stats = getRuleStats()[ruleId];
   badge.textContent = stats ? `找到 ${stats.found} · 隐藏 ${stats.hidden}` : '未命中';
-  if (stats && stats.found > 0) {
-    badge.title = '本页面（本次加载）该规则选择器命中的元素数与实际屏蔽数';
-  }
   return badge;
 }
 
 /**
- * 内置规则行（只读）。
- * @param {Readonly<Record<string, unknown>>} rule
+ * 规则行（内置与自定义同一套编辑器；内置行带「内置」标记）。
+ * @param {{ id?: string, selector?: string, mode?: string, titleSelector?: string, userSelector?: string, durationSelector?: string, enabled?: boolean }} rule
+ * @param {{ builtin?: boolean }} [options]
  * @returns {HTMLElement}
  */
-export function createBuiltinRow(rule) {
-  const row = document.createElement('div');
-  row.className = RULE_BUILTIN_ROW_CLASS;
-  row.dataset.ruleId = rule.id;
-
-  const badge = document.createElement('span');
-  badge.className = RULE_BUILTIN_BADGE_CLASS;
-  badge.textContent = '内置';
-  badge.title = '扩展自带的卡片选择器；B 站改版失效时可用下方「添加规则」自行补一条';
-
-  const selectorSpan = document.createElement('span');
-  selectorSpan.className = 'block_obj_rule_selector';
-  selectorSpan.textContent = rule.selector;
-  selectorSpan.title = String(rule.selector);
-
-  const modeSpan = document.createElement('span');
-  modeSpan.className = 'block_obj_rule_mode';
-  modeSpan.textContent = modeLabel(rule.mode);
-
-  row.appendChild(badge);
-  row.appendChild(selectorSpan);
-  row.appendChild(modeSpan);
-  row.appendChild(createStatsBadge(rule.id));
-  return row;
-}
-
-/**
- * 自定义规则行（可编辑）。
- * @param {{ id?: string, selector?: string, mode?: string, titleSelector?: string, userSelector?: string, enabled?: boolean }} rule
- * @returns {HTMLElement}
- */
-export function createRuleRow(rule = {}) {
+export function createRuleRow(rule = {}, options = {}) {
   const row = document.createElement('div');
   row.className = RULE_ROW_CLASS;
   row.dataset.ruleId = rule.id || crypto.randomUUID();
+  row.dataset.kind = options.builtin ? 'builtin' : 'custom';
 
   const enabledBox = document.createElement('input');
   enabledBox.type = 'checkbox';
@@ -117,6 +83,14 @@ export function createRuleRow(rule = {}) {
   enabledLabel.className = CHECKBOX_LABEL_CLASS;
   enabledLabel.title = '启用该规则';
   enabledLabel.textContent = '启用';
+
+  if (options.builtin) {
+    const badge = document.createElement('span');
+    badge.className = RULE_BUILTIN_BADGE_CLASS;
+    badge.textContent = '内置';
+    badge.title = '扩展自带的规则；可直接改选择器或删除，保存后生效（删除所有内置规则即全部停用）';
+    row.appendChild(badge);
+  }
 
   const selectorInput = textInput(rule.selector ?? '', '卡片容器选择器', '目标卡片容器选择器，如 .bili-video-card');
 
@@ -135,19 +109,23 @@ export function createRuleRow(rule = {}) {
     modeSel.appendChild(option);
   }
 
-  const moreBtn = createSpanBtn('更多', '展开标题/UP主选择器', () => {
+  const moreBtn = createSpanBtn('更多', '展开标题/UP主/时长选择器', () => {
     const isHidden = moreDiv.classList.toggle('block_obj_li_hide');
     moreBtn.textContent = isHidden ? '更多' : '收起';
   });
   const delBtn = createSpanBtn('删除', '删除该规则', () => row.remove());
 
+  // 「更多」区：可扩展的选择器字段（标题 / UP主 / 时长）
   const moreDiv = document.createElement('div');
   moreDiv.className = RULE_MORE_CLASS;
   const titleInput = textInput(rule.titleSelector ?? '', '标题选择器（可选）', '卡片内标题元素选择器；过滤模式至少填写标题或 UP主选择器之一');
   const userInput = textInput(rule.userSelector ?? '', 'UP主选择器（可选）', '卡片内 UP主元素选择器');
+  const durationInput = textInput(rule.durationSelector ?? '', '时长选择器（可选）', '卡片内时长文本元素选择器，如 .duration；留空则自动探测');
   moreDiv.appendChild(titleInput);
   moreDiv.appendChild(userInput);
-  if (rule.mode === 'hide' || (!rule.titleSelector && !rule.userSelector)) {
+  moreDiv.appendChild(durationInput);
+  const hasMore = Boolean(rule.titleSelector || rule.userSelector || rule.durationSelector);
+  if (rule.mode === 'hide' || !hasMore) {
     moreDiv.classList.add('block_obj_li_hide');
     moreBtn.textContent = '更多';
   } else {
@@ -166,16 +144,19 @@ export function createRuleRow(rule = {}) {
 }
 
 /**
- * 某作用域下的规则组（内置只读 + 自定义可编辑）。
- * @param {{ scope: string, rules: ReadonlyArray<Record<string, unknown>> }} params
- * @returns {{ container: HTMLElement, collect: () => { rules: Array<Record<string, unknown>>, invalidCount: number } }}
+ * 某作用域下的规则组。
+ * 内置规则来源：用户持久化的 builtinRules（若存在），否则代码默认 BUILTIN_RULES；
+ * 多作用域内置规则在每个所属标签页各渲染一行，收集时按当前标签页写单作用域。
+ * @param {{ scope: string, rules: ReadonlyArray<Record<string, unknown>>, builtinRules: ReadonlyArray<Record<string, unknown>> | undefined }} params
+ * @returns {{ container: HTMLElement, collect: () => { builtinRules: Array<Record<string, unknown>>, rules: Array<Record<string, unknown>>, invalidCount: number } }}
  */
-export function createRulesGroup({ scope, rules }) {
+export function createRulesGroup({ scope, rules, builtinRules }) {
   const container = document.createElement('div');
 
-  for (const rule of BUILTIN_RULES) {
+  const builtinSource = builtinRules ?? BUILTIN_RULES;
+  for (const rule of builtinSource) {
     if (rule.scopes.includes(scope)) {
-      container.appendChild(createBuiltinRow(rule));
+      container.appendChild(createRuleRow(rule, { builtin: true }));
     }
   }
   for (const rule of rules ?? []) {
@@ -186,32 +167,48 @@ export function createRulesGroup({ scope, rules }) {
   });
   container.appendChild(addBtn);
 
+  /** 行 → 规则对象；非法返回 null */
+  function collectRow(row) {
+    const selector = row.querySelector('input[type="text"]').value.trim();
+    const enabledBox = row.querySelector('input[type="checkbox"]');
+    const modeSel = row.querySelector('select');
+    const mode = modeSel?.value ?? 'match';
+    const [titleInput, userInput, durationInput] = row.querySelectorAll(`.${RULE_MORE_CLASS} input`);
+    const titleSelector = titleInput ? titleInput.value.trim() : '';
+    const userSelector = userInput ? userInput.value.trim() : '';
+    const durationSelector = durationInput ? durationInput.value.trim() : '';
+    if (!isCompilableSelector(selector) || (mode === 'match' && !titleSelector && !userSelector)) {
+      return null;
+    }
+    return {
+      id: row.dataset.ruleId,
+      selector,
+      scopes: [scope],
+      mode,
+      titleSelector,
+      userSelector,
+      durationSelector,
+      enabled: enabledBox ? enabledBox.checked : true,
+    };
+  }
+
   function collect() {
-    const collected = [];
+    const builtinCollected = [];
+    const customCollected = [];
     let invalidCount = 0;
     for (const row of container.getElementsByClassName(RULE_ROW_CLASS)) {
-      const selector = row.querySelector('input[type="text"]').value.trim();
-      const enabledBox = row.querySelector('input[type="checkbox"]');
-      const modeSel = row.querySelector('select');
-      const mode = modeSel?.value ?? 'match';
-      const [titleInput, userInput] = row.querySelectorAll(`.${RULE_MORE_CLASS} input`);
-      const titleSelector = titleInput ? titleInput.value.trim() : '';
-      const userSelector = userInput ? userInput.value.trim() : '';
-      if (!isCompilableSelector(selector) || (mode === 'match' && !titleSelector && !userSelector)) {
+      const collected = collectRow(row);
+      if (!collected) {
         invalidCount++;
         continue;
       }
-      collected.push({
-        id: row.dataset.ruleId,
-        selector,
-        scopes: [scope],
-        mode,
-        titleSelector,
-        userSelector,
-        enabled: enabledBox ? enabledBox.checked : true,
-      });
+      if (row.dataset.kind === 'builtin') {
+        builtinCollected.push(collected);
+      } else {
+        customCollected.push(collected);
+      }
     }
-    return { rules: collected, invalidCount };
+    return { builtinRules: builtinCollected, rules: customCollected, invalidCount };
   }
 
   return { container, collect };

@@ -140,21 +140,35 @@ describe('normalize（v4 形状规范化）', () => {
     ]);
   });
 
-  test('规则规范化：selector 必填，mode 收敛，缺省补全', () => {
+  test('规则规范化：selector 必填，mode 收敛，缺省补全，durationSelector 可选', () => {
     const result = normalize({
       version: 4,
       rules: [
         { id: 'r1', selector: '.x', scopes: ['search'], mode: 'hide' },
         { id: 'r2', selector: '', scopes: ['home'], mode: 'match', titleSelector: '.t' },
-        { id: 'r3', selector: '.y', scopes: ['bad'], mode: 'weird', titleSelector: '.t', enabled: false },
+        { id: 'r3', selector: '.y', scopes: ['bad'], mode: 'weird', titleSelector: '.t', durationSelector: '.dur', enabled: false },
         { selector: '.z' },
         'not-object',
       ],
     });
     expect(result.rules).toEqual([
-      { id: 'r1', selector: '.x', scopes: ['search'], mode: 'hide', titleSelector: '', userSelector: '', enabled: true },
-      { id: 'r3', selector: '.y', scopes: ['global'], mode: 'match', titleSelector: '.t', userSelector: '', enabled: false },
+      { id: 'r1', selector: '.x', scopes: ['search'], mode: 'hide', titleSelector: '', userSelector: '', durationSelector: '', enabled: true },
+      { id: 'r3', selector: '.y', scopes: ['global'], mode: 'match', titleSelector: '.t', userSelector: '', durationSelector: '.dur', enabled: false },
     ]);
+  });
+
+  test('builtinRules：数组时持久化通过，缺省时省略（引擎回落代码默认）', () => {
+    const withBuiltins = normalize({
+      version: 4,
+      builtinRules: [{ id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', titleSelector: '.t' }],
+    });
+    expect(withBuiltins.builtinRules).toEqual([
+      { id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', titleSelector: '.t', userSelector: '', durationSelector: '', enabled: true },
+    ]);
+    const withoutBuiltins = normalize({ version: 4 });
+    expect('builtinRules' in withoutBuiltins).toBe(false);
+    // 空数组合法（用户删除了全部内置规则）
+    expect(normalize({ version: 4, builtinRules: [] }).builtinRules).toEqual([]);
   });
 
   test('不修改入参（不可变）', () => {
@@ -182,7 +196,7 @@ describe('toRuntimeConfig / toStorageObject', () => {
       enable: true,
       durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
       words: [{ value: '/a,b/gi', scopes: ['search'] }, { value: '广告', scopes: ['global'] }],
-      rules: [{ id: 'r1', selector: '.x', scopes: ['home'], mode: 'hide', titleSelector: '', userSelector: '', enabled: true }],
+      rules: [{ id: 'r1', selector: '.x', scopes: ['home'], mode: 'hide', titleSelector: '', userSelector: '', durationSelector: '', enabled: true }],
     };
     expect(toStorageObject(toRuntimeConfig(raw))).toEqual(raw);
   });

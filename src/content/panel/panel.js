@@ -87,7 +87,7 @@ export function createPanel(deps) {
     tabSeparator.className = SEPARATOR_LI_CLASS;
     const tabSeparatorText = document.createElement('span');
     tabSeparatorText.className = SEPARATOR_TEXT_CLASS;
-    tabSeparatorText.textContent = '按页面分类管理（「全局」处处生效；动态/空间等页面由全局词条覆盖）：';
+    tabSeparatorText.textContent = '按页面分类管理（「全局」处处生效；动态页由全局词条覆盖）：';
     tabSeparator.appendChild(tabSeparatorText);
     ulNode.appendChild(tabSeparator);
 
@@ -116,6 +116,7 @@ export function createPanel(deps) {
         durations: entriesByScope(config.durations, scope),
         tempDurations: tempDurationsByScope(scope),
         rules: entriesByScope(config.rules, scope),
+        builtinRules: config.builtinRules ? entriesByScope(config.builtinRules, scope) : undefined,
         onTempCleared: () => {
           removeTempEntriesByScope(scope);
           onTempCleared();
@@ -185,6 +186,7 @@ export function createPanel(deps) {
     const words = [];
     const durations = [];
     const temp = [];
+    const builtinRules = [];
     const rules = [];
     let invalidCount = 0;
     for (const { pane } of panes) {
@@ -195,11 +197,12 @@ export function createPanel(deps) {
         ...result.words.temp.map(entry => ({ ...entry, kind: 'word' })),
         ...result.durations.temp.map(entry => ({ ...entry, kind: 'duration' }))
       );
+      builtinRules.push(...result.builtinRules);
       rules.push(...result.rules);
       invalidCount += result.invalidCount;
     }
     return {
-      storage: { version: CONFIG_VERSION, enable: general.enable, words, durations, rules },
+      storage: { version: CONFIG_VERSION, enable: general.enable, words, durations, builtinRules, rules },
       temp,
       invalidCount,
     };

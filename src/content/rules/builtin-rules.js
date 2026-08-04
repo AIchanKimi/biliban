@@ -58,12 +58,12 @@ export const BUILTIN_RULES = Object.freeze([
     scopes: ['home', 'video'],
     mode: 'match',
   }),
-  /* UP主空间视频主页内容（v5.2：空间分类精简，全局词条覆盖） */
+  /* UP主空间视频主页内容（v5.3：空间分类回归） */
   Object.freeze({
     id: 'builtin-space-cube',
     selector: '.cube-list .small-item',
     titleSelector: '.small-item .title',
-    scopes: ['global'],
+    scopes: ['space'],
     mode: 'match',
   }),
   /* 下拉动态卡片（旧含裸 bilibili.com → 全子域） */

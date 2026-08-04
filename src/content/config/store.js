@@ -81,6 +81,8 @@ function sanitizeRule(rule) {
     mode: rule.mode === 'hide' ? 'hide' : 'match',
     titleSelector: typeof rule.titleSelector === 'string' ? rule.titleSelector : '',
     userSelector: typeof rule.userSelector === 'string' ? rule.userSelector : '',
+    // v5.3 扩展点：更多选择器字段按需追加（时长选择器为首个）
+    durationSelector: typeof rule.durationSelector === 'string' ? rule.durationSelector : '',
     enabled: rule.enabled !== false,
   });
 }
@@ -124,20 +126,28 @@ function sanitizeDurations(list) {
  */
 export function normalize(rawConfig) {
   const base = isCurrentVersion(rawConfig) ? rawConfig : migrateToLatest(rawConfig);
-  const rules = [];
-  for (const rule of Array.isArray(base.rules) ? base.rules : []) {
-    const sanitized = sanitizeRule(rule);
-    if (sanitized) {
-      rules.push(sanitized);
+  const sanitizeRuleList = list => {
+    const result = [];
+    for (const rule of Array.isArray(list) ? list : []) {
+      const sanitized = sanitizeRule(rule);
+      if (sanitized) {
+        result.push(sanitized);
+      }
     }
-  }
-  return Object.freeze({
+    return Object.freeze(result);
+  };
+  const result = {
     version: CONFIG_VERSION,
     enable: base.enable ?? true,
     words: sanitizeEntries(base.words),
     durations: sanitizeDurations(base.durations),
-    rules: Object.freeze(rules),
-  });
+    rules: sanitizeRuleList(base.rules),
+  };
+  // 内置规则的持久化版本（面板编辑/删除后写回）；从未编辑过则缺省，引擎回落代码默认
+  if (Array.isArray(base.builtinRules)) {
+    result.builtinRules = sanitizeRuleList(base.builtinRules);
+  }
+  return Object.freeze(result);
 }
 
 /**

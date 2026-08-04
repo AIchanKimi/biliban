@@ -19,11 +19,14 @@ describe('categoryFor（URL → 页面分类，v5.2 精简）', () => {
     expect(categoryFor('https://www.bilibili.com/read/ranking')).toBe('home');
   });
 
-  test('动态（t 域 / opus）与空间归 other（仅全局词条生效）', () => {
+  test('空间子域（v5.3 回归）', () => {
+    expect(categoryFor('https://space.bilibili.com/123/video')).toBe('space');
+  });
+
+  test('动态（t 域 / opus）归 other（仅全局词条生效）', () => {
     expect(categoryFor('https://t.bilibili.com/')).toBe('other');
     expect(categoryFor('https://t.bilibili.com/123456')).toBe('other');
     expect(categoryFor('https://www.bilibili.com/opus/987654')).toBe('other');
-    expect(categoryFor('https://space.bilibili.com/123/video')).toBe('other');
   });
 
   test('扩展不注入的域名返回 null', () => {

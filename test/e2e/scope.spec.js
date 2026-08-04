@@ -28,6 +28,7 @@ test.describe('作用域与内置规则', () => {
       'www.bilibili.com': 'video-cards.html',
       'search.bilibili.com': 'search.html',
       't.bilibili.com': 'dynamic-cards.html',
+      'space.bilibili.com': 'space.html',
     });
     await setupApiRoute(context, { ownerName: '正常UP' });
     const extensionId = await getExtensionId(context);
@@ -99,6 +100,18 @@ test.describe('作用域与内置规则', () => {
     await page.waitForSelector('[data-test="search-item-clean"]');
     await page.waitForTimeout(300);
     await expect(page.locator('[data-test="search-item-clean"]')).not.toHaveClass(new RegExp(NONE));
+    await page.close();
+  });
+
+  test('space 作用域（v5.3 回归）：空间页卡片被全局词屏蔽', async () => {
+    const page = await context.newPage();
+    await page.goto('https://space.bilibili.com/123/video');
+    await expect
+      .poll(() => page.locator('[data-test="space-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
+      .toBe(true);
+    await page.waitForSelector('[data-test="space-card-clean"]');
+    await page.waitForTimeout(300);
+    await expect(page.locator('[data-test="space-card-clean"]')).not.toHaveClass(new RegExp(NONE));
     await page.close();
   });
 

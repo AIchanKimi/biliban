@@ -89,6 +89,70 @@ describe('findDurationSeconds', () => {
   });
 });
 
+describe('findDurationSeconds + durationSelector（规则级扩展点）', () => {
+  beforeEach(() => clearDurationCache());
+
+  function fakeCardWithSelector(leafText, selectorResult) {
+    let scans = 0;
+    return {
+      get scans() {
+        return scans;
+      },
+      querySelectorAll(sel) {
+        scans++;
+        if (sel !== '*') {
+          throw new Error('仅支持 *');
+        }
+        return [{ childElementCount: 0, textContent: leafText }];
+      },
+      querySelector(sel) {
+        return selectorResult;
+      },
+    };
+  }
+
+  test('提供 durationSelector 时精确定位（跳过启发式）', () => {
+    // 叶子文本不是时长（启发式会失败），但选择器命中的元素是时长
+    const card = fakeCardWithSelector('123万播放', { textContent: '2:30' });
+    expect(findDurationSeconds(card, '.dur')).toBe(150);
+    expect(card.scans).toBe(0);
+  });
+
+  test('durationSelector 未命中元素 → null', () => {
+    const card = fakeCardWithSelector('0:30', null);
+    expect(findDurationSeconds(card, '.dur')).toBeNull();
+  });
+
+  test('durationSelector 宽松提取：元素文本混入角标也能取出时长', () => {
+    const card = fakeCardWithSelector('123万播放', { textContent: '0:45×' });
+    expect(findDurationSeconds(card, '.dur')).toBe(45);
+  });
+
+  test('启发式保持严格（整段精确匹配），不受宽松提取影响', () => {
+    const card = fakeCardWithSelector('0:45×', null);
+    expect(findDurationSeconds(card)).toBeNull();
+  });
+
+  test('选择器非法 → 安全返回 null', () => {
+    const card = {
+      querySelector() {
+        throw new Error('bad selector');
+      },
+      querySelectorAll: () => [],
+    };
+    expect(findDurationSeconds(card, '[[[')).toBeNull();
+  });
+
+  test('同一卡片不同选择器独立缓存', () => {
+    const card = fakeCardWithSelector('0:30', { textContent: '2:00' });
+    expect(findDurationSeconds(card)).toBe(30); // 启发式
+    expect(findDurationSeconds(card, '.dur')).toBe(120); // 选择器
+    expect(findDurationSeconds(card)).toBe(30); // 命中各自缓存
+    expect(findDurationSeconds(card, '.dur')).toBe(120);
+    expect(card.scans).toBe(1); // 启发式只扫了一次
+  });
+});
+
 describe('decideDurationEntries（时长词条判定）', () => {
   test('短于：命中与不命中', () => {
     const entries = [{ op: 'lt', seconds: 60, scopes: ['global'] }];

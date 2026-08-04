@@ -40,11 +40,11 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
-  test('四个分类标签齐全（v5.2 精简），默认停在「全局」', async () => {
+  test('五个分类标签齐全（v5.3 空间回归），默认停在「全局」', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
-    for (const [scope, label] of [['global', '全局'], ['home', '首页'], ['video', '视频页'], ['search', '搜索']]) {
+    for (const [scope, label] of [['global', '全局'], ['home', '首页'], ['video', '视频页'], ['search', '搜索'], ['space', '空间']]) {
       await expect(page.locator(`#bilibiliConfig_tab_${scope}`)).toHaveText(label);
     }
     await expect(page.locator('#bilibiliConfig_tab_global')).toHaveClass(/block_obj_tab_active/);
@@ -123,11 +123,12 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
     await page.locator('#bilibiliConfig_tab_home').click();
-    // 内置规则行：只读展示选择器
-    const builtinRows = page.locator('#bilibiliConfig_pane_home .block_obj_rule_row_builtin');
-    await expect(builtinRows.first()).toBeVisible();
-    await expect(page.locator('#bilibiliConfig_pane_home')).toContainText('.video-card-common');
+    // 内置规则行：可编辑（选择器为输入框），带「内置」标记
+    const builtinBadges = page.locator('#bilibiliConfig_pane_home .block_obj_rule_builtin_badge');
+    await expect(builtinBadges.first()).toBeVisible();
     await expect(page.locator('#bilibiliConfig_pane_home')).toContainText('内置');
+    const commonRow = page.locator('#bilibiliConfig_pane_home .block_obj_rule_row[data-rule-id="builtin-video-card-common"]');
+    await expect(commonRow.locator('input[type="text"]').first()).toHaveValue('.video-card-common');
     // fixture 有 6 张 .video-card-common 卡片：该规则统计徽标命中（引擎在面板打开前已跑过多轮）
     const statsBadge = page.locator('#bilibiliConfig_pane_home .block_obj_rule_stats[data-rule-id="builtin-video-card-common"]');
     await expect(statsBadge).toHaveText(/找到 \d+ · 隐藏 \d+/);
@@ -153,6 +154,34 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await expect(chipText).toHaveClass(/block_obj_child_green/);
     await expect(chipText).toHaveAttribute('title', '/一个很长的正则,含逗号/');
     await expect(chipText).toContainText(' ... ');
+    await page.close();
+  });
+
+  test('内置规则可编辑：改选择器 + 删除，保存后写回 builtinRules', async () => {
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/');
+    await openPanel(page);
+    await page.locator('#bilibiliConfig_tab_home').click();
+
+    // 编辑 .groom-module 行的选择器
+    const groomRow = page.locator('#bilibiliConfig_pane_home .block_obj_rule_row[data-rule-id="builtin-groom-module"]');
+    await expect(groomRow.locator('.block_obj_rule_builtin_badge')).toHaveText('内置');
+    await groomRow.locator('input[type="text"]').first().fill('.groom-module-v2');
+
+    // 删除 .article-card 行
+    const articleRow = page.locator('#bilibiliConfig_pane_home .block_obj_rule_row[data-rule-id="builtin-article-card"]');
+    await articleRow.getByText('删除', { exact: true }).click();
+
+    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await expect
+      .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).builtinRules)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'builtin-groom-module', selector: '.groom-module-v2', scopes: ['home'] }),
+      ]));
+    const builtinRules = (await readStorageKey(toolsPage, 'bilibili_config')).builtinRules;
+    expect(builtinRules.find(r => r.id === 'builtin-article-card' && r.scopes[0] === 'home')).toBeUndefined();
+    // home 页其余内置规则仍在（未误删）
+    expect(builtinRules.filter(r => r.scopes[0] === 'home').length).toBeGreaterThanOrEqual(15);
     await page.close();
   });
 

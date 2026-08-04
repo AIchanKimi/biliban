@@ -30,7 +30,9 @@ export function createHideEvent(deps) {
     if (!category) {
       return;
     }
-    const rules = [...BUILTIN_RULES, ...(config.rules ?? [])];
+    // 内置规则优先取用户持久化版本（面板编辑/删除后写回）；从未编辑过则用代码默认
+    const builtins = config.builtinRules !== undefined ? config.builtinRules : BUILTIN_RULES;
+    const rules = [...builtins, ...(config.rules ?? [])];
     for (const rule of rules) {
       const enabled = rule.enabled !== false;
       // mode:'hide' 禁用时仍需执行以解除已施加的隐藏
@@ -75,7 +77,7 @@ export function createHideEvent(deps) {
             }
           }
           const titleEl = rule.titleSelector ? extractEle(ele, rule.titleSelector) : null;
-          if (hideHandler(ele, username, titleEl, rule.method ?? 0)) {
+          if (hideHandler(ele, username, titleEl, rule.method ?? 0, rule.durationSelector ?? '')) {
             hiddenCount++;
           }
         } catch (e) {

@@ -85,12 +85,15 @@ describe('scopes 映射表（按旧 indexOf 语义逐条钉死）', () => {
     expect(scopesOf('.video-item')).toEqual(['search']);
   });
 
-  test('动态与空间规则 v5.2 归 [global]（分类精简，全局词条覆盖）', () => {
+  test('动态规则归 [global]（动态分类精简，全局词条覆盖）', () => {
     expect(scopesOf('.bili-dyn-item')).toEqual(['global']);
-    expect(scopesOf('.cube-list .small-item')).toEqual(['global']);
   });
 
-  test('全部 scopes 只含 v5.2 的 4 个有效分类', () => {
+  test('空间规则归 [space]（v5.3 空间分类回归）', () => {
+    expect(scopesOf('.cube-list .small-item')).toEqual(['space']);
+  });
+
+  test('全部 scopes 只含 v5.3 的 5 个有效分类', () => {
     for (const rule of BUILTIN_RULES) {
       for (const scope of rule.scopes) {
         expect(SCOPE_VALUES).toContain(scope);

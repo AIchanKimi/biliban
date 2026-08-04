@@ -15,15 +15,16 @@ import { removeTempChips } from '../chips.js';
  *   durations: ReadonlyArray<{ op: string, seconds: number, scopes: string[] }>,
  *   tempDurations: ReadonlyArray<{ op: string, seconds: number, scopes: string[] }>,
  *   rules: ReadonlyArray<Record<string, unknown>>,
+ *   builtinRules: ReadonlyArray<Record<string, unknown>> | undefined,
  *   onTempCleared: () => void,
  * }} params
  * @returns {{
  *   el: HTMLElement,
- *   collect: () => { words: object, durations: object, rules: Array<Record<string, unknown>>, invalidCount: number },
+ *   collect: () => { words: object, durations: object, builtinRules: Array<Record<string, unknown>>, rules: Array<Record<string, unknown>>, invalidCount: number },
  * }}
  */
 export function createScopePane(params) {
-  const { scope, words, tempWords, durations, tempDurations, rules, onTempCleared } = params;
+  const { scope, words, tempWords, durations, tempDurations, rules, builtinRules, onTempCleared } = params;
 
   const pane = document.createElement('li');
   pane.className = SCOPE_PANE_CLASS;
@@ -54,7 +55,7 @@ export function createScopePane(params) {
   ruleSeparatorText.title = '规则教扩展认识本页面的卡片容器；无需修改扩展代码';
   ruleSeparator.appendChild(ruleSeparatorText);
 
-  const rulesGroup = createRulesGroup({ scope, rules });
+  const rulesGroup = createRulesGroup({ scope, rules, builtinRules });
   const rulesLi = document.createElement('li');
   const rulesDiv = document.createElement('div');
   rulesDiv.className = LIST_DIV_CLASS;
@@ -86,6 +87,7 @@ export function createScopePane(params) {
     return {
       words: wordsResult,
       durations: durationsResult,
+      builtinRules: rulesResult.builtinRules,
       rules: rulesResult.rules,
       invalidCount: rulesResult.invalidCount,
     };

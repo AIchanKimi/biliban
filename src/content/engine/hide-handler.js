@@ -9,10 +9,10 @@ import { hideOperation } from '../dom/hide-operation.js';
 
 /**
  * @param {{ getConfig: () => Readonly<Record<string, unknown>> }} deps
- * @returns {(itemNode, username, textValue, method?: number) => boolean}
+ * @returns {(itemNode, username, textValue, method?: number, durationSelector?: string) => boolean}
  */
 export function createHideHandler(deps) {
-  return function hideHandler(itemNode, username, textValue, method = 0) {
+  return function hideHandler(itemNode, username, textValue, method = 0, durationSelector = '') {
     if (username && typeof username === 'object') {
       username = username.textContent;
     }
@@ -26,7 +26,7 @@ export function createHideHandler(deps) {
       hideStatus = decide(config, category, { username, title: textValue });
       if (!hideStatus && config.durations.length > 0) {
         const probe = Array.isArray(itemNode) ? itemNode.find(Boolean) : itemNode;
-        hideStatus = decideDurationEntries(config.durations, findDurationSeconds(probe), category);
+        hideStatus = decideDurationEntries(config.durations, findDurationSeconds(probe, durationSelector), category);
       }
     }
     if (Array.isArray(itemNode)) {

@@ -2,10 +2,11 @@ import { describe, test, expect } from 'bun:test';
 import { SCOPES, SCOPE_VALUES, isValidScope, scopeLabel, normalizeScopes, scopesApply } from '../../src/content/config/scopes.js';
 
 describe('scopes 枚举（v5.2 精简为 4 类）', () => {
-  test('四个固定分类，中文标签齐全', () => {
-    expect(SCOPE_VALUES).toEqual(['global', 'home', 'video', 'search']);
+  test('五个固定分类，中文标签齐全', () => {
+    expect(SCOPE_VALUES).toEqual(['global', 'home', 'video', 'search', 'space']);
     expect(scopeLabel('search')).toBe('搜索');
     expect(scopeLabel('global')).toBe('全局');
+    expect(scopeLabel('space')).toBe('空间');
   });
 
   test('SCOPES 冻结', () => {
@@ -15,7 +16,6 @@ describe('scopes 枚举（v5.2 精简为 4 类）', () => {
   test('isValidScope 拒绝已废弃分类', () => {
     expect(isValidScope('home')).toBe(true);
     expect(isValidScope('dynamics')).toBe(false);
-    expect(isValidScope('space')).toBe(false);
     expect(isValidScope(null)).toBe(false);
   });
 
@@ -29,9 +29,9 @@ describe('normalizeScopes', () => {
     expect(normalizeScopes(['search', 'dynamics', 'search'])).toEqual(['search']);
   });
 
-  test('空/全非法/废弃分类 → [global]（旧数据自然迁移）', () => {
+  test('空/全非法/已废弃分类 → [global]（旧数据自然迁移）', () => {
     expect(normalizeScopes([])).toEqual(['global']);
-    expect(normalizeScopes(['dynamics', 'space'])).toEqual(['global']);
+    expect(normalizeScopes(['dynamics'])).toEqual(['global']);
     expect(normalizeScopes(null)).toEqual(['global']);
   });
 

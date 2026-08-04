@@ -205,7 +205,18 @@ export const LIB_STYLE = `
     border: 1px dotted #444;
     border-radius: 3px;
     margin-top: 4px;
+    max-height: 52vh;
+    overflow-y: auto;
     padding: 2px 6px;
+  }
+  .block_obj_scope_pane::-webkit-scrollbar {
+    background-color: #979797;
+    border-radius: 5px;
+    width: 10px;
+  }
+  .block_obj_scope_pane::-webkit-scrollbar-thumb {
+    background-color: #404040;
+    border-radius: 5px;
   }
   .block_obj_rule_row {
     border: 1px dotted #555;
