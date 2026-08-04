@@ -8,7 +8,7 @@ export const CONFIG_VERSION = 4;
 // 临时词条默认有效期：24 小时
 export const TEMP_DEFAULT_HOURS = 24;
 // 代码内置规则集版本：升级内置集时 +1，用户已固化的旧版 builtinRules 自动失效回落新集
-export const BUILTIN_RULES_VERSION = 2;
+export const BUILTIN_RULES_VERSION = 3;
 
 // 破坏性迁移前按原版本号备份：bilibili_config_v1_backup … bilibili_config_v3_backup
 export function backupKeyFor(version) {

@@ -22,9 +22,9 @@ test.describe('自定义规则（目标元素编辑）', () => {
     await seedConfig(
       toolsPage,
       baseConfig([
-        { id: 'r-hide', selector: '.custom-junk', scopes: ['home'], mode: 'hide', titleSelector: '', userSelector: '', enabled: true },
-        { id: 'r-match', selector: '.custom-match-card', scopes: ['home'], mode: 'match', textSelectors: ['.custom-title'], userSelector: '', enabled: true },
-        { id: 'r-bad', selector: '[[[invalid', scopes: ['home'], mode: 'hide', titleSelector: '', userSelector: '', enabled: true },
+        { id: 'r-hide', selector: '.custom-junk', scopes: ['play'], mode: 'hide', titleSelector: '', userSelector: '', enabled: true },
+        { id: 'r-match', selector: '.custom-match-card', scopes: ['play'], mode: 'match', textSelectors: ['.custom-title'], userSelector: '', enabled: true },
+        { id: 'r-bad', selector: '[[[invalid', scopes: ['play'], mode: 'hide', titleSelector: '', userSelector: '', enabled: true },
       ])
     );
   });
@@ -32,7 +32,7 @@ test.describe('自定义规则（目标元素编辑）', () => {
 
   test('mode:hide 直接隐藏（坏选择器规则不中断其余规则）', async () => {
     const page = await context.newPage();
-    await page.goto('https://www.bilibili.com/');
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
     await expect
       .poll(() => page.locator('[data-test="custom-junk"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
@@ -41,7 +41,7 @@ test.describe('自定义规则（目标元素编辑）', () => {
 
   test('mode:match 经 titleSelector 命中关键字后隐藏', async () => {
     const page = await context.newPage();
-    await page.goto('https://www.bilibili.com/');
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
     await expect
       .poll(() => page.locator('[data-test="custom-match"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
@@ -58,12 +58,12 @@ test.describe('自定义规则（目标元素编辑）', () => {
       words: [],
       durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
       rules: [
-        { id: 'r-dursel', selector: '.dur-card', scopes: ['home'], mode: 'match', textSelectors: ['.t'], durationSelector: '.dur', enabled: true },
-        { id: 'r-nodursel', selector: '.dur-card-nosel', scopes: ['home'], mode: 'match', textSelectors: ['.t'], durationSelector: '', enabled: true },
+        { id: 'r-dursel', selector: '.dur-card', scopes: ['play'], mode: 'match', textSelectors: ['.t'], durationSelector: '.dur', enabled: true },
+        { id: 'r-nodursel', selector: '.dur-card-nosel', scopes: ['play'], mode: 'match', textSelectors: ['.t'], durationSelector: '', enabled: true },
       ],
     });
     const page = await context.newPage();
-    await page.goto('https://www.bilibili.com/');
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
     // 有时长选择器：找到 0:45 < 60s → 屏蔽
     await expect
       .poll(() => page.locator('[data-test="card-dursel"]').evaluate(el => el.classList.contains('block_obj_none')))
@@ -81,11 +81,11 @@ test.describe('自定义规则（目标元素编辑）', () => {
     await seedConfig(
       toolsPage,
       baseConfig([
-        { id: 'r-hide', selector: '.custom-junk', scopes: ['home'], mode: 'hide', titleSelector: '', userSelector: '', enabled: false },
+        { id: 'r-hide', selector: '.custom-junk', scopes: ['play'], mode: 'hide', titleSelector: '', userSelector: '', enabled: false },
       ])
     );
     const page = await context.newPage();
-    await page.goto('https://www.bilibili.com/');
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
     await page.waitForSelector('[data-test="custom-junk"]');
     await page.waitForTimeout(800);
     await expect(page.locator('[data-test="custom-junk"]')).not.toHaveClass(new RegExp(NONE));

@@ -74,4 +74,3 @@ export const LI_WORDS_CLASS = 'block_obj_li_words';
 export const SAVE_FLASH_MS = 1000; // 「已保存」文本闪烁
 export const BUTTON_FLASH_MS = 1000; // buttonClicked title 闪烁
 export const CANCEL_REBUILD_MS = 800; // 取消后重建延迟
-export const HOMEPAGE_CLICK_DELAY_MS = 250; // 首页 .btn.next/.prev

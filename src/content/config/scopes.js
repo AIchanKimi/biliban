@@ -1,16 +1,23 @@
-// 作用域（页面分类）枚举 v5.3：词条与规则统一用 scopes 数组表达生效范围。
-// 5 类（动态页由引擎归为 'other'，仅全局词条生效；空间为用户常用页面，v5.3 回归）。
-// 分类由 engine/category.js 从当前 URL 推导；'global' 处处生效。
+// 作用域（页面分类）枚举 v6.0：词条与规则统一用 scopes 数组表达生效范围。
+// 分类由 engine/category.js 从当前 URL 精确推导；不匹配的页面扩展不触发。
+// 'global' 覆盖全部已匹配分类；「全局」面板仅管理屏蔽词，规则归各具体分类。
 
 export const SCOPES = Object.freeze([
   Object.freeze({ value: 'global', label: '全局' }),
-  Object.freeze({ value: 'home', label: '首页' }),
-  Object.freeze({ value: 'video', label: '视频页' }),
   Object.freeze({ value: 'search', label: '搜索' }),
   Object.freeze({ value: 'space', label: '空间' }),
+  Object.freeze({ value: 'play', label: '播放' }),
+  Object.freeze({ value: 'fav', label: '收藏' }),
 ]);
 
 export const SCOPE_VALUES = Object.freeze(SCOPES.map(scope => scope.value));
+
+// 旧版本分类迁移映射（v6 删除了 home/video/dynamics 分类）
+const LEGACY_SCOPE_MAP = Object.freeze({
+  home: 'play',
+  video: 'play',
+  dynamics: 'global',
+});
 
 /** @param {unknown} value @returns {boolean} */
 export function isValidScope(value) {
@@ -24,15 +31,15 @@ export function scopeLabel(value) {
 }
 
 /**
- * 归一化 scopes：过滤非法值、去重；空结果回落 ['global']。
- * （旧数据中的 dynamics/space 等已废弃分类在此自然回落为 global。）
+ * 归一化 scopes：旧分类按映射表迁移，过滤非法值、去重；空结果回落 ['global']。
  * @param {unknown} scopes
  * @returns {string[]}
  */
 export function normalizeScopes(scopes) {
   const source = Array.isArray(scopes) ? scopes : [];
   const result = [];
-  for (const value of source) {
+  for (const raw of source) {
+    const value = LEGACY_SCOPE_MAP[raw] ?? raw;
     if (isValidScope(value) && !result.includes(value)) {
       result.push(value);
     }
@@ -41,9 +48,9 @@ export function normalizeScopes(scopes) {
 }
 
 /**
- * scopes 是否覆盖给定页面分类。
+ * scopes 是否覆盖给定页面分类。未匹配页面（category=null）不触发。
  * @param {ReadonlyArray<string>} scopes
- * @param {string | null} category categoryFor 的结果（null=扩展不作用的页面）
+ * @param {string | null} category categoryFor 的结果
  * @returns {boolean}
  */
 export function scopesApply(scopes, category) {

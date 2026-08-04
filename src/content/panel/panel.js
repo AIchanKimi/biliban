@@ -109,7 +109,7 @@ export function createPanel(deps) {
     tabSeparator.className = SEPARATOR_LI_CLASS;
     const tabSeparatorText = document.createElement('span');
     tabSeparatorText.className = SEPARATOR_TEXT_CLASS;
-    tabSeparatorText.textContent = '按页面分类管理（「全局」处处生效；动态页由全局词条覆盖）：';
+    tabSeparatorText.textContent = '按页面分类管理（「全局」覆盖全部已匹配页面，仅屏蔽词；规则归各具体分类）：';
     tabSeparator.appendChild(tabSeparatorText);
     ulNode.appendChild(tabSeparator);
 

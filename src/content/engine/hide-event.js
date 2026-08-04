@@ -15,12 +15,11 @@ import { hideOperation } from '../dom/hide-operation.js';
  * @param {{
  *   getConfig: () => Readonly<Record<string, unknown>>,  // 运行时有效配置（含临时词条与自定义规则）
  *   hideHandler: (itemNode, username, textValue, method?) => boolean,
- *   homeExtra: { run: () => void },
  * }} deps
  * @returns {() => void}
  */
 export function createHideEvent(deps) {
-  const { getConfig, hideHandler, homeExtra } = deps;
+  const { getConfig, hideHandler } = deps;
 
   return function hideEvent() {
     const config = getConfig();
@@ -74,9 +73,6 @@ export function createHideEvent(deps) {
         }
       }
       setRuleStats(rule.id, all.length, hiddenCount);
-    }
-    if (category === 'home' || category === 'video') {
-      homeExtra.run();
     }
   };
 }

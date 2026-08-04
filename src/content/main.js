@@ -6,8 +6,6 @@ import { initTempStore, mergeTempEntries, subscribeTemp } from './config/temp-st
 import { createHideHandler } from './engine/hide-handler.js';
 import { createHideEvent } from './engine/hide-event.js';
 import { createScheduler } from './engine/scheduler.js';
-import { createWwwPage } from './pages/www.js';
-import { initPageTriggers } from './pages/triggers.js';
 import { injectStyles } from './panel/styles.js';
 import { createPanel } from './panel/panel.js';
 import { initTrigger } from './panel/trigger.js';
@@ -42,8 +40,7 @@ export async function start() {
   });
   panel.init();
 
-  const homeExtra = createWwwPage({ hideHandler });
-  const hideEvent = createHideEvent({ getConfig, hideHandler, homeExtra });
+  const hideEvent = createHideEvent({ getConfig, hideHandler });
   hideEventRef = hideEvent;
 
   initTrigger({ onToggle: () => panel.toggle() });
@@ -54,7 +51,6 @@ export async function start() {
     childList: true,
     subtree: true,
   });
-  initPageTriggers({ hideEvent });
 
   // 多标签页同步：配置远端变更 → 重建面板 + 替换配置 + 重跑屏蔽
   subscribe(remoteConfig => {

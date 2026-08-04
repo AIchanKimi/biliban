@@ -160,7 +160,7 @@ describe('normalize（v4 形状规范化）', () => {
   test('旧形状规则：titleSelector/userSelector 并入 textSelectors', () => {
     const result = normalize({
       version: 4,
-      rules: [{ id: 'old', selector: '.card', scopes: ['home'], mode: 'match', titleSelector: '.t', userSelector: '.u' }],
+      rules: [{ id: 'old', selector: '.card', scopes: ['play'], mode: 'match', titleSelector: '.t', userSelector: '.u' }],
     });
     expect(result.rules[0].textSelectors).toEqual(['.t', '.u']);
   });
@@ -168,18 +168,18 @@ describe('normalize（v4 形状规范化）', () => {
   test('builtinRules：版本一致才承认持久化；版本不一致整体回落代码默认', () => {
     const withBuiltins = normalize({
       version: 4,
-      builtinVersion: 2,
-      builtinRules: [{ id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', textSelectors: ['.t'] }],
+      builtinVersion: 3,
+      builtinRules: [{ id: 'builtin-x', selector: '.x', scopes: ['play'], mode: 'match', textSelectors: ['.t'] }],
     });
     expect(withBuiltins.builtinRules).toEqual([
-      { id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', textSelectors: ['.t'], durationSelector: '', enabled: true },
+      { id: 'builtin-x', selector: '.x', scopes: ['play'], mode: 'match', textSelectors: ['.t'], durationSelector: '', enabled: true },
     ]);
-    expect(withBuiltins.builtinVersion).toBe(2);
+    expect(withBuiltins.builtinVersion).toBe(3);
 
     // 旧版本固化集 → 丢弃，引擎回落代码默认
     const stale = normalize({
       version: 4,
-      builtinVersion: 1,
+      builtinVersion: 2,
       builtinRules: [{ id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', textSelectors: ['.t'] }],
     });
     expect('builtinRules' in stale).toBe(false);
@@ -187,7 +187,7 @@ describe('normalize（v4 形状规范化）', () => {
     const withoutBuiltins = normalize({ version: 4 });
     expect('builtinRules' in withoutBuiltins).toBe(false);
     // 空数组合法（用户删除了全部内置规则），版本一致时保留
-    expect(normalize({ version: 4, builtinVersion: 2, builtinRules: [] }).builtinRules).toEqual([]);
+    expect(normalize({ version: 4, builtinVersion: 3, builtinRules: [] }).builtinRules).toEqual([]);
   });
 
   test('不修改入参（不可变）', () => {
@@ -201,7 +201,7 @@ describe('toRuntimeConfig / toStorageObject', () => {
   test('words 完成正则重建，durations 原样', () => {
     const result = toRuntimeConfig({
       version: 4,
-      words: [{ value: '/x/i', scopes: ['global'] }, { value: '普通', scopes: ['home'] }],
+      words: [{ value: '/x/i', scopes: ['global'] }, { value: '普通', scopes: ['play'] }],
       durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
     });
     expect(result.words[0].value).toBeInstanceOf(RegExp);
@@ -215,7 +215,7 @@ describe('toRuntimeConfig / toStorageObject', () => {
       enable: true,
       durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
       words: [{ value: '/a,b/gi', scopes: ['search'] }, { value: '广告', scopes: ['global'] }],
-      rules: [{ id: 'r1', selector: '.x', scopes: ['home'], mode: 'hide', textSelectors: ['.t'], durationSelector: '', enabled: true }],
+      rules: [{ id: 'r1', selector: '.x', scopes: ['play'], mode: 'hide', textSelectors: ['.t'], durationSelector: '', enabled: true }],
     };
     expect(toStorageObject(toRuntimeConfig(raw))).toEqual(raw);
   });
