@@ -3,7 +3,7 @@
 // 任一字段命中即屏蔽（OR）：
 //   普通词：字段包含该词
 //   正则词 /pat/flags：字段 match —— 字段级精确用 /^词$/ 表达
-import { scopesApply } from '../config/scopes.js';
+import { scopesApply } from "../config/scopes.js";
 
 /**
  * @param {Readonly<{ enable: boolean, words: ReadonlyArray<{ value: string | RegExp, scopes: ReadonlyArray<string> }> }>} config 运行时有效配置（含临时词条合并）
@@ -16,8 +16,8 @@ export function decide(config, category, fields = {}) {
     return false;
   }
   const texts = (fields.texts ?? [])
-    .map(text => (typeof text === 'string' ? text.trim() : ''))
-    .filter(text => text !== '');
+    .map((text) => (typeof text === "string" ? text.trim() : ""))
+    .filter((text) => text !== "");
   if (texts.length === 0) {
     return false;
   }
@@ -27,11 +27,11 @@ export function decide(config, category, fields = {}) {
     }
     if (entry.value instanceof RegExp) {
       // match 而非 test：规避 /g 标志的 lastIndex 状态污染
-      if (texts.some(text => text.match(entry.value))) {
+      if (texts.some((text) => text.match(entry.value))) {
         return true;
       }
-    } else if (typeof entry.value === 'string' && entry.value !== '') {
-      if (texts.some(text => text.includes(entry.value))) {
+    } else if (typeof entry.value === "string" && entry.value !== "") {
+      if (texts.some((text) => text.includes(entry.value))) {
         return true;
       }
     }

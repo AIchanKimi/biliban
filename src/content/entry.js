@@ -3,10 +3,10 @@
 (async () => {
   try {
     // 供 E2E 发现扩展 id（非敏感信息）
-    document.documentElement.setAttribute('data-biliban-id', chrome.runtime.id);
-    const main = await import(chrome.runtime.getURL('src/content/main.js'));
+    document.documentElement.setAttribute("data-biliban-id", chrome.runtime.id);
+    const main = await import(chrome.runtime.getURL("src/content/main.js"));
     await main.start();
   } catch (error) {
-    console.error('[bilibili_block] 模块加载失败:', error);
+    console.error("[bilibili_block] 模块加载失败:", error);
   }
 })();

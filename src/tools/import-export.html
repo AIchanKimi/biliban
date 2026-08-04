@@ -70,10 +70,14 @@
     <main>
       <h1>哔哩哔哩 - 屏蔽指定内容：导入 / 导出</h1>
       <p class="hint">
-        迁移方法：Tampermonkey 仪表盘 → 脚本「储存」标签页 → 复制 <code>bilibili_config</code> 的 JSON
+        迁移方法：Tampermonkey 仪表盘 → 脚本「储存」标签页 → 复制
+        <code>bilibili_config</code> 的 JSON
         值，粘贴到下方文本框后点击「导入」。导出可用于备份或在浏览器之间迁移。
       </p>
-      <textarea id="data" placeholder="在此粘贴 bilibili_config JSON…"></textarea>
+      <textarea
+        id="data"
+        placeholder="在此粘贴 bilibili_config JSON…"
+      ></textarea>
       <div class="actions">
         <button id="import">导入</button>
         <button id="export" class="secondary">导出当前设置</button>

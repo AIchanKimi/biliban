@@ -8,8 +8,8 @@ import {
   CHIP_DEL_CLASS,
   CHIP_TRUNCATE_LIMIT,
   CHIP_TEMP_BADGE_CLASS,
-} from '../constants.js';
-import { REGEX_LITERAL_RE } from '../config/serialize.js';
+} from "../constants.js";
+import { REGEX_LITERAL_RE } from "../config/serialize.js";
 
 /**
  * @typedef {{ value: string, scopes: string[], temp?: boolean, label?: string, dataset?: Record<string, string> }} ChipEntry
@@ -23,19 +23,23 @@ import { REGEX_LITERAL_RE } from '../config/serialize.js';
  */
 export function createChip(entry) {
   const { value, scopes, temp = false, label, dataset } = entry;
-  const childSpan = document.createElement('span');
+  const childSpan = document.createElement("span");
   childSpan.className = CHIP_CLASS;
-  childSpan.dataset.scopes = scopes.join(',');
-  childSpan.dataset.temp = temp ? '1' : '0';
+  childSpan.dataset.scopes = scopes.join(",");
+  childSpan.dataset.temp = temp ? "1" : "0";
   for (const [key, val] of Object.entries(dataset ?? {})) {
     childSpan.dataset[key] = val;
   }
 
   const display = label ?? value;
-  const textSpan = document.createElement('span');
-  textSpan.className = REGEX_LITERAL_RE.test(value) ? `${CHIP_TEXT_CLASS} ${CHIP_GREEN_CLASS}` : CHIP_TEXT_CLASS;
+  const textSpan = document.createElement("span");
+  textSpan.className = REGEX_LITERAL_RE.test(value)
+    ? `${CHIP_TEXT_CLASS} ${CHIP_GREEN_CLASS}`
+    : CHIP_TEXT_CLASS;
   textSpan.textContent =
-    display.length > CHIP_TRUNCATE_LIMIT ? display.slice(0, 3) + ' ... ' + display.slice(-3) : display;
+    display.length > CHIP_TRUNCATE_LIMIT
+      ? display.slice(0, 3) + " ... " + display.slice(-3)
+      : display;
   if (display.length > CHIP_TRUNCATE_LIMIT) {
     textSpan.title = display;
   }
@@ -43,21 +47,24 @@ export function createChip(entry) {
 
   // 作用域由所在标签页表达，chip 不再重复显示；仅临时词条加徽标
   if (temp) {
-    const tempBadge = document.createElement('span');
+    const tempBadge = document.createElement("span");
     tempBadge.className = CHIP_TEMP_BADGE_CLASS;
-    tempBadge.textContent = '临时';
+    tempBadge.textContent = "临时";
     const expiresAt = Number(dataset?.expiresAt);
-    tempBadge.title = Number.isFinite(expiresAt) && expiresAt > 0
-      ? '临时词条，' + new Date(expiresAt).toLocaleString() + ' 到期后自动清除'
-      : '临时词条，到期后自动清除';
+    tempBadge.title =
+      Number.isFinite(expiresAt) && expiresAt > 0
+        ? "临时词条，" +
+          new Date(expiresAt).toLocaleString() +
+          " 到期后自动清除"
+        : "临时词条，到期后自动清除";
     childSpan.appendChild(tempBadge);
   }
 
-  const delSpan = document.createElement('span');
-  delSpan.textContent = 'X';
-  delSpan.title = '移除';
+  const delSpan = document.createElement("span");
+  delSpan.textContent = "X";
+  delSpan.title = "移除";
   delSpan.className = CHIP_DEL_CLASS;
-  delSpan.addEventListener('click', () => childSpan.remove());
+  delSpan.addEventListener("click", () => childSpan.remove());
   childSpan.appendChild(delSpan);
   return childSpan;
 }
@@ -68,13 +75,14 @@ function chipToEntry(chip) {
   if (!textEl) {
     return null;
   }
-  const scopes = typeof chip.dataset.scopes === 'string' && chip.dataset.scopes !== ''
-    ? chip.dataset.scopes.split(',')
-    : ['global'];
+  const scopes =
+    typeof chip.dataset.scopes === "string" && chip.dataset.scopes !== ""
+      ? chip.dataset.scopes.split(",")
+      : ["global"];
   const entry = {
     value: textEl.title || textEl.textContent,
     scopes,
-    temp: chip.dataset.temp === '1',
+    temp: chip.dataset.temp === "1",
   };
   const expiresAt = Number(chip.dataset.expiresAt);
   if (Number.isFinite(expiresAt) && expiresAt > 0) {
@@ -114,7 +122,11 @@ export function extractEntriesFromEl(listEl) {
 function hasEntry(listEl, value, scopes) {
   for (const chip of listEl.getElementsByClassName(CHIP_CLASS)) {
     const entry = chipToEntry(chip);
-    if (entry && entry.value === value && [...entry.scopes].sort().join(',') === [...scopes].sort().join(',')) {
+    if (
+      entry &&
+      entry.value === value &&
+      [...entry.scopes].sort().join(",") === [...scopes].sort().join(",")
+    ) {
       return true;
     }
   }
@@ -131,7 +143,7 @@ export function prependEntry(listEl, entry) {
   if (hasEntry(listEl, entry.value, entry.scopes)) {
     return false;
   }
-  listEl.insertAdjacentElement('afterbegin', createChip(entry));
+  listEl.insertAdjacentElement("afterbegin", createChip(entry));
   return true;
 }
 
@@ -144,13 +156,21 @@ export function prependEntry(listEl, entry) {
 export function seedEntries(listEl, persistentEntries, tempEntries) {
   for (const entry of persistentEntries ?? []) {
     if (entry && entry.value) {
-      listEl.insertAdjacentElement('afterbegin', createChip({ ...entry, temp: false }));
+      listEl.insertAdjacentElement(
+        "afterbegin",
+        createChip({ ...entry, temp: false }),
+      );
     }
   }
   for (const entry of tempEntries ?? []) {
     if (entry && entry.value) {
-      const dataset = entry.expiresAt ? { expiresAt: String(entry.expiresAt) } : {};
-      listEl.insertAdjacentElement('afterbegin', createChip({ ...entry, temp: true, dataset }));
+      const dataset = entry.expiresAt
+        ? { expiresAt: String(entry.expiresAt) }
+        : {};
+      listEl.insertAdjacentElement(
+        "afterbegin",
+        createChip({ ...entry, temp: true, dataset }),
+      );
     }
   }
 }

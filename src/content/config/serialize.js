@@ -1,5 +1,5 @@
 // 正则序列化 v5：存储中关键字一律为 '/pattern/flags' 字符串，读取时重建 RegExp。
-// 仅关键字词条参与转换；用户名按字面字符串精确匹配（v1 语义保留）。
+// 仅屏蔽词词条参与转换（v5.1 起用户名已并入屏蔽词）。
 
 // 正则字面量形式识别（Block_Obj 全局使用同一模式）
 export const REGEX_LITERAL_RE = /^\/.+\/[a-z]*$/i;
@@ -10,11 +10,11 @@ export const REGEX_LITERAL_RE = /^\/.+\/[a-z]*$/i;
  * @returns {{ pattern: string, flags: string } | null}
  */
 export function parseRegexLiteral(text) {
-  if (typeof text !== 'string' || !REGEX_LITERAL_RE.test(text)) {
+  if (typeof text !== "string" || !REGEX_LITERAL_RE.test(text)) {
     return null;
   }
-  const pattern = text.replace(/^\/|\/[a-z]*$/gi, '');
-  const flags = text.replace(/^\/.*\/[^a-z]*/i, '');
+  const pattern = text.replace(/^\/|\/[a-z]*$/gi, "");
+  const flags = text.replace(/^\/.*\/[^a-z]*/i, "");
   return { pattern, flags };
 }
 
@@ -32,9 +32,12 @@ export function toRuntimeWordEntries(entries) {
     const parsed = parseRegexLiteral(entry.value);
     if (parsed) {
       try {
-        result.push({ value: new RegExp(parsed.pattern, parsed.flags), scopes: [...entry.scopes] });
+        result.push({
+          value: new RegExp(parsed.pattern, parsed.flags),
+          scopes: [...entry.scopes],
+        });
       } catch (error) {
-        console.error('存在错误的正则表达式: ', error);
+        console.error("存在错误的正则表达式: ", error);
       }
     } else {
       result.push({ value: entry.value, scopes: [...entry.scopes] });
@@ -50,8 +53,11 @@ export function toRuntimeWordEntries(entries) {
  */
 export function toStorageWordEntries(entries) {
   const source = Array.isArray(entries) ? entries : [];
-  return source.map(entry => ({
-    value: entry.value instanceof RegExp ? `/${entry.value.source}/${entry.value.flags}` : entry.value,
+  return source.map((entry) => ({
+    value:
+      entry.value instanceof RegExp
+        ? `/${entry.value.source}/${entry.value.flags}`
+        : entry.value,
     scopes: [...entry.scopes],
   }));
 }

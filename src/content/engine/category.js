@@ -11,7 +11,7 @@
  * @returns {'search' | 'space' | 'play' | 'fav' | null} 未匹配页面返回 null
  */
 export function categoryFor(href) {
-  if (typeof href !== 'string' || href === '') {
+  if (typeof href !== "string" || href === "") {
     return null;
   }
   let url;
@@ -21,28 +21,28 @@ export function categoryFor(href) {
     return null;
   }
   const path = url.pathname;
-  if (url.hostname === 'search.bilibili.com') {
-    return 'search';
+  if (url.hostname === "search.bilibili.com") {
+    return "search";
   }
-  if (url.hostname === 'space.bilibili.com') {
+  if (url.hostname === "space.bilibili.com") {
     if (/^\/\d+\/upload\/video(\/|$)/.test(path)) {
-      return 'space';
+      return "space";
     }
     if (/^\/\d+\/favlist(\/|$)/.test(path)) {
-      return 'fav';
+      return "fav";
     }
     return null;
   }
-  if (url.hostname === 'www.bilibili.com') {
+  if (url.hostname === "www.bilibili.com") {
     // 注意顺序：/list/watchlater 属「播放」，/watchlater 属「收藏」
-    if (path.startsWith('/video/') || path.startsWith('/bangumi/')) {
-      return 'play';
+    if (path.startsWith("/video/") || path.startsWith("/bangumi/")) {
+      return "play";
     }
-    if (path.startsWith('/list/watchlater') || path.startsWith('/list/ml')) {
-      return 'play';
+    if (path.startsWith("/list/watchlater") || path.startsWith("/list/ml")) {
+      return "play";
     }
-    if (path.startsWith('/watchlater')) {
-      return 'fav';
+    if (path.startsWith("/watchlater")) {
+      return "fav";
     }
     return null;
   }

@@ -4,7 +4,7 @@
 // 性能防护：叶子节点过滤 + 严格正则首中即返 + WeakMap 只缓存正值
 // （负值不缓存——时长文本常懒加载，下一轮 hideEvent 需重试）。
 
-import { scopesApply } from '../config/scopes.js';
+import { scopesApply } from "../config/scopes.js";
 
 const DURATION_RE = /^\d{1,3}(:\d{2}){1,2}$/;
 
@@ -21,7 +21,7 @@ export function formatDuration(totalSeconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  const pad = n => String(n).padStart(2, '0');
+  const pad = (n) => String(n).padStart(2, "0");
   if (h > 0) {
     return `${pad(h)}:${pad(m)}:${pad(s)}`;
   }
@@ -33,14 +33,14 @@ export function formatDuration(totalSeconds) {
  * @returns {number | null} 秒数；非时长文本返回 null
  */
 export function parseDuration(text) {
-  if (typeof text !== 'string') {
+  if (typeof text !== "string") {
     return null;
   }
   const trimmed = text.trim();
   if (!DURATION_RE.test(trimmed)) {
     return null;
   }
-  const parts = trimmed.split(':').map(Number);
+  const parts = trimmed.split(":").map(Number);
   if (parts.length === 3) {
     return parts[0] * 3600 + parts[1] * 60 + parts[2];
   }
@@ -54,11 +54,11 @@ export function parseDuration(text) {
  * @param {string} [durationSelector] 卡片内时长元素选择器（可选）
  * @returns {number | null} 秒数；未找到返回 null
  */
-export function findDurationSeconds(card, durationSelector = '') {
-  if (!card || typeof card.querySelectorAll !== 'function') {
+export function findDurationSeconds(card, durationSelector = "") {
+  if (!card || typeof card.querySelectorAll !== "function") {
     return null;
   }
-  const cacheKey = durationSelector || '';
+  const cacheKey = durationSelector || "";
   const bySelector = durationCache.get(card);
   if (bySelector && bySelector.has(cacheKey)) {
     return bySelector.get(cacheKey);
@@ -69,7 +69,10 @@ export function findDurationSeconds(card, durationSelector = '') {
       const el = card.querySelector(cacheKey);
       if (el) {
         // 用户明确指定了时长元素：宽松提取（textContent 内首个时长模式，容忍混入的角标等）
-        const matched = typeof el.textContent === 'string' ? el.textContent.match(/\d{1,3}(?::\d{2}){1,2}/) : null;
+        const matched =
+          typeof el.textContent === "string"
+            ? el.textContent.match(/\d{1,3}(?::\d{2}){1,2}/)
+            : null;
         seconds = matched ? parseDuration(matched[0]) : null;
       }
     } catch {
@@ -78,7 +81,7 @@ export function findDurationSeconds(card, durationSelector = '') {
   } else {
     let elements;
     try {
-      elements = card.querySelectorAll('*');
+      elements = card.querySelectorAll("*");
     } catch {
       return null;
     }
@@ -114,10 +117,10 @@ export function decideDurationEntries(entries, cardSeconds, category) {
     if (!scopesApply(entry.scopes, category)) {
       continue;
     }
-    if (entry.op === 'lt' && cardSeconds < entry.seconds) {
+    if (entry.op === "lt" && cardSeconds < entry.seconds) {
       return true;
     }
-    if (entry.op === 'gt' && cardSeconds > entry.seconds) {
+    if (entry.op === "gt" && cardSeconds > entry.seconds) {
       return true;
     }
   }

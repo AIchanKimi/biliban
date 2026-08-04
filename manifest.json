@@ -4,7 +4,7 @@
   "version": "6.7.1",
   "description": "按屏蔽词（关键字/正则，纯文字匹配）屏蔽 bilibili 视频卡片，支持页面作用域（搜索/空间/播放/收藏）、过期式临时屏蔽、时长按蔽与可编辑的选择器规则；多标签页同步。",
   "permissions": ["storage"],
-  "host_permissions": ["*://*.bilibili.com/*", "https://api.bilibili.com/*"],
+  "host_permissions": ["*://*.bilibili.com/*"],
   "content_scripts": [
     {
       "matches": [
@@ -51,7 +51,6 @@
         "src/content/panel/sections/rules.js",
         "src/content/panel/sections/scope-pane.js",
         "src/content/rules/builtin-rules.js",
-        "src/content/util/list-order.js",
         "src/content/util/string-to-array.js"
       ],
       "matches": ["*://*.bilibili.com/*"]

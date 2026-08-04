@@ -1,9 +1,15 @@
 // 面板分节：单个作用域标签页的内容（屏蔽词组 + 时长组 + 规则组）。
 // 作用域由标签页承载，组内不再出现作用域选择。
-import { FIELD_ID_PREFIX, SCOPE_PANE_CLASS, UL_NODE_CLASS, LIST_DIV_CLASS, LI_WORDS_CLASS } from '../../constants.js';
-import { createEntriesGroup } from './entries.js';
-import { createDurationsGroup } from './durations.js';
-import { createRulesGroup } from './rules.js';
+import {
+  FIELD_ID_PREFIX,
+  SCOPE_PANE_CLASS,
+  UL_NODE_CLASS,
+  LIST_DIV_CLASS,
+  LI_WORDS_CLASS,
+} from "../../constants.js";
+import { createEntriesGroup } from "./entries.js";
+import { createDurationsGroup } from "./durations.js";
+import { createRulesGroup } from "./rules.js";
 
 /**
  * @param {{
@@ -22,13 +28,13 @@ import { createRulesGroup } from './rules.js';
 export function createScopePane(params) {
   const { scope, words, tempWords, durations, tempDurations, rules } = params;
   // 「全局」面板管理屏蔽词 + 时长词条；规则归各具体分类
-  const rulesAllowed = scope !== 'global';
+  const rulesAllowed = scope !== "global";
 
-  const pane = document.createElement('li');
+  const pane = document.createElement("li");
   pane.className = SCOPE_PANE_CLASS;
-  pane.id = FIELD_ID_PREFIX + 'pane_' + scope;
+  pane.id = FIELD_ID_PREFIX + "pane_" + scope;
   pane.dataset.scope = scope;
-  const innerUl = document.createElement('ul');
+  const innerUl = document.createElement("ul");
   innerUl.className = UL_NODE_CLASS;
   pane.appendChild(innerUl);
 
@@ -50,10 +56,10 @@ export function createScopePane(params) {
   if (rulesAllowed) {
     // v6.3：规则区整体默认折叠，头部「规则」开关按需展开
     rulesGroup = createRulesGroup({ scope, rules });
-    const rulesLi = document.createElement('li');
-    const rulesDiv = document.createElement('div');
+    const rulesLi = document.createElement("li");
+    const rulesDiv = document.createElement("div");
     rulesDiv.className = LIST_DIV_CLASS;
-    rulesDiv.id = FIELD_ID_PREFIX + 'rules_' + scope;
+    rulesDiv.id = FIELD_ID_PREFIX + "rules_" + scope;
     rulesDiv.appendChild(rulesGroup.container);
     rulesLi.appendChild(rulesDiv);
 

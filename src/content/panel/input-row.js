@@ -7,7 +7,7 @@ import {
   LI_HIDE_CLASS,
   LIST_TEXTAREA_DIV_CLASS,
   BUTTON_FLASH_MS,
-} from '../constants.js';
+} from "../constants.js";
 
 let flashTimer = null;
 
@@ -38,11 +38,11 @@ export function buttonClicked(button, flashTitle) {
  * @returns {HTMLElement}
  */
 export function createSpanBtn(label, title, callback) {
-  const btn = document.createElement('span');
+  const btn = document.createElement("span");
   btn.textContent = label;
   btn.title = title;
   btn.className = INPUT_BTN_CLASS;
-  btn.addEventListener('click', e => callback(e));
+  btn.addEventListener("click", (e) => callback(e));
   return btn;
 }
 
@@ -53,9 +53,9 @@ export function createSpanBtn(label, title, callback) {
  * @param {string} liClassname
  */
 export function toggleList(ulNode, liClassname) {
-  for (const li of ulNode.querySelectorAll('li')) {
+  for (const li of ulNode.querySelectorAll("li")) {
     if (li.classList.contains(liClassname)) {
-      const listTextareaDiv = li.querySelector('.' + LIST_TEXTAREA_DIV_CLASS);
+      const listTextareaDiv = li.querySelector("." + LIST_TEXTAREA_DIV_CLASS);
       if (listTextareaDiv) {
         listTextareaDiv.classList.toggle(LIST_EXPAND_CLASS);
       }
@@ -63,7 +63,7 @@ export function toggleList(ulNode, liClassname) {
       li.classList.toggle(LI_HIDE_CLASS);
     }
   }
-  for (const br of ulNode.querySelectorAll('br')) {
+  for (const br of ulNode.querySelectorAll("br")) {
     br.classList.toggle(LI_HIDE_CLASS);
   }
 }
@@ -77,16 +77,16 @@ export async function copyToClipboard(text) {
     await navigator.clipboard.writeText(text);
   } catch (e) {
     try {
-      const textarea = document.createElement('textarea');
+      const textarea = document.createElement("textarea");
       textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
       document.body.appendChild(textarea);
       textarea.select();
-      document.execCommand('copy');
+      document.execCommand("copy");
       textarea.remove();
     } catch (fallbackError) {
-      console.error('[bilibili_block] 复制到剪贴板失败:', fallbackError);
+      console.error("[bilibili_block] 复制到剪贴板失败:", fallbackError);
     }
   }
 }

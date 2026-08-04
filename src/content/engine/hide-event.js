@@ -4,16 +4,16 @@
 //   mode:'match' 文字选择器提取文本 → hideHandler（屏蔽词 + 时长词条）。
 // 命中统计（rule-stats）按轮覆盖写：每条规则记录本轮「匹配到几个 / 屏蔽了几个」，
 // 面板徽标因此反映当前页面状态，稳定不累加。
-import { categoryFor } from './category.js';
-import { setRuleStats } from './rule-stats.js';
-import { scopesApply } from '../config/scopes.js';
-import { extractEle } from '../dom/extract-ele.js';
-import { hideOperation } from '../dom/hide-operation.js';
+import { categoryFor } from "./category.js";
+import { setRuleStats } from "./rule-stats.js";
+import { scopesApply } from "../config/scopes.js";
+import { extractEle } from "../dom/extract-ele.js";
+import { hideOperation } from "../dom/hide-operation.js";
 
 /**
  * @param {{
  *   getConfig: () => Readonly<Record<string, unknown>>,  // 运行时有效配置（含临时词条与自定义规则）
- *   hideHandler: (itemNode, username, textValue, method?) => boolean,
+ *   hideHandler: (itemNode, texts, method, durationSelector) => boolean,
  * }} deps
  * @returns {() => void}
  */
@@ -37,13 +37,13 @@ export function createHideEvent(deps) {
       try {
         all = document.querySelectorAll(rule.selector);
       } catch (e) {
-        console.error('[bilibili_block] 选择器执行失败: ', rule.selector, e);
+        console.error("[bilibili_block] 选择器执行失败: ", rule.selector, e);
         continue;
       }
       let hiddenCount = 0;
       for (const ele of all) {
         try {
-          if (rule.mode === 'hide') {
+          if (rule.mode === "hide") {
             hideOperation(ele, enabled, rule.method ?? 0);
             if (enabled) {
               hiddenCount++;
@@ -59,16 +59,23 @@ export function createHideEvent(deps) {
           const texts = [];
           for (const textSelector of rule.textSelectors ?? []) {
             const textEl = extractEle(ele, textSelector);
-            const text = textEl ? textEl.textContent.trim() : '';
+            const text = textEl ? textEl.textContent.trim() : "";
             if (text) {
               texts.push(text);
             }
           }
-          if (hideHandler(ele, texts, rule.method ?? 0, rule.durationSelector ?? '')) {
+          if (
+            hideHandler(
+              ele,
+              texts,
+              rule.method ?? 0,
+              rule.durationSelector ?? "",
+            )
+          ) {
             hiddenCount++;
           }
         } catch (e) {
-          console.error('[bilibili_block] 元素处理失败: ', rule.selector, e);
+          console.error("[bilibili_block] 元素处理失败: ", rule.selector, e);
         }
       }
       setRuleStats(rule.id, all.length, hiddenCount);

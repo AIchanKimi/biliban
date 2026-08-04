@@ -1,14 +1,23 @@
 // 引导装配（v5.5）：配置（含迁移）→ 临时词条载入 → 屏蔽引擎 → 面板/触发器 → observer → 多标签同步。
 // 页面分类实时取自 location.href（SPA 友好）；临时词条独立存储、带过期时间、跨标签同步。
-import { onBodyReady } from './dom/arrive.js';
-import { loadConfig, toRuntimeConfig, saveConfig, subscribe } from './config/store.js';
-import { initTempStore, mergeTempEntries, subscribeTemp } from './config/temp-store.js';
-import { createHideHandler } from './engine/hide-handler.js';
-import { createHideEvent } from './engine/hide-event.js';
-import { createScheduler } from './engine/scheduler.js';
-import { injectStyles } from './panel/styles.js';
-import { createPanel } from './panel/panel.js';
-import { initTrigger } from './panel/trigger.js';
+import { onBodyReady } from "./dom/arrive.js";
+import {
+  loadConfig,
+  toRuntimeConfig,
+  saveConfig,
+  subscribe,
+} from "./config/store.js";
+import {
+  initTempStore,
+  mergeTempEntries,
+  subscribeTemp,
+} from "./config/temp-store.js";
+import { createHideHandler } from "./engine/hide-handler.js";
+import { createHideEvent } from "./engine/hide-event.js";
+import { createScheduler } from "./engine/scheduler.js";
+import { injectStyles } from "./panel/styles.js";
+import { createPanel } from "./panel/panel.js";
+import { initTrigger } from "./panel/trigger.js";
 
 export async function start() {
   await onBodyReady();
@@ -31,7 +40,7 @@ export async function start() {
   const panel = createPanel({
     initialConfig: storageShape,
     persist: saveConfig,
-    onSaved: saved => {
+    onSaved: (saved) => {
       storageShape = saved;
       runtimeConfig = toRuntimeConfig(saved);
       hideEventRef();
@@ -52,7 +61,7 @@ export async function start() {
   });
 
   // 多标签页同步：配置远端变更 → 重建面板 + 替换配置 + 重跑屏蔽
-  subscribe(remoteConfig => {
+  subscribe((remoteConfig) => {
     storageShape = remoteConfig;
     panel.rebuild(remoteConfig);
     runtimeConfig = toRuntimeConfig(remoteConfig);

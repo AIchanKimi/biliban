@@ -1,22 +1,22 @@
 // 作用域（页面分类）枚举 v6.0：词条与规则统一用 scopes 数组表达生效范围。
 // 分类由 engine/category.js 从当前 URL 精确推导；不匹配的页面扩展不触发。
-// 'global' 覆盖全部已匹配分类；「全局」面板仅管理屏蔽词，规则归各具体分类。
+// 'global' 覆盖全部已匹配分类；「全局」面板管理屏蔽词与时长词条，规则归各具体分类。
 
 export const SCOPES = Object.freeze([
-  Object.freeze({ value: 'global', label: '全局' }),
-  Object.freeze({ value: 'search', label: '搜索' }),
-  Object.freeze({ value: 'space', label: '空间' }),
-  Object.freeze({ value: 'play', label: '播放' }),
-  Object.freeze({ value: 'fav', label: '收藏' }),
+  Object.freeze({ value: "global", label: "全局" }),
+  Object.freeze({ value: "search", label: "搜索" }),
+  Object.freeze({ value: "space", label: "空间" }),
+  Object.freeze({ value: "play", label: "播放" }),
+  Object.freeze({ value: "fav", label: "收藏" }),
 ]);
 
-export const SCOPE_VALUES = Object.freeze(SCOPES.map(scope => scope.value));
+export const SCOPE_VALUES = Object.freeze(SCOPES.map((scope) => scope.value));
 
 // 旧版本分类迁移映射（v6 删除了 home/video/dynamics 分类）
 const LEGACY_SCOPE_MAP = Object.freeze({
-  home: 'play',
-  video: 'play',
-  dynamics: 'global',
+  home: "play",
+  video: "play",
+  dynamics: "global",
 });
 
 /** @param {unknown} value @returns {boolean} */
@@ -26,8 +26,8 @@ export function isValidScope(value) {
 
 /** @param {unknown} value @returns {string} 未知值返回空串 */
 export function scopeLabel(value) {
-  const scope = SCOPES.find(item => item.value === value);
-  return scope ? scope.label : '';
+  const scope = SCOPES.find((item) => item.value === value);
+  return scope ? scope.label : "";
 }
 
 /**
@@ -44,7 +44,7 @@ export function normalizeScopes(scopes) {
       result.push(value);
     }
   }
-  return result.length > 0 ? result : ['global'];
+  return result.length > 0 ? result : ["global"];
 }
 
 /**
@@ -57,5 +57,5 @@ export function scopesApply(scopes, category) {
   if (!category) {
     return false;
   }
-  return scopes.includes('global') || scopes.includes(category);
+  return scopes.includes("global") || scopes.includes(category);
 }

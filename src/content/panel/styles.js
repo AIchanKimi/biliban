@@ -58,10 +58,6 @@ export const LIB_STYLE = `
     padding-left: 0;
     margin: 0;
   }
-  .block_obj_checkbox_li {
-    display: inline-block;
-    margin-top: 2px;
-  }
   /* v6.5：统一原生 checkbox（accent-color 主色，勾形由浏览器绘制，不再用伪元素字符） */
   .block_obj_checkbox_input {
     accent-color: var(--bo-primary);
@@ -431,30 +427,6 @@ export const LIB_STYLE = `
   .block_obj_rule_duration_input {
     width: 180px;
   }
-  .block_obj_rule_selector {
-    color: var(--bo-text-secondary);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
-    margin-left: 6px;
-    max-width: 220px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: inline-block;
-    vertical-align: bottom;
-  }
-  .block_obj_rule_mode {
-    color: var(--bo-text-muted);
-    margin-left: 6px;
-  }
-  .block_obj_rule_builtin_badge {
-    background-color: var(--bo-bg-muted);
-    border: 1px solid var(--bo-border);
-    border-radius: 999px;
-    color: var(--bo-text-muted);
-    font-size: 11px;
-    padding: 0 6px;
-  }
   .block_obj_rule_stats {
     border: 1px solid var(--bo-border);
     border-radius: 999px;
@@ -558,9 +530,6 @@ export const LIB_STYLE = `
     background-color: #F4F4F5;
     box-shadow: 0 2px 10px rgba(9, 9, 11, 0.12);
   }
-  .block_obj_move_right {
-    margin-left: 15px;
-  }
   .block_obj_none {
     display: none !important;
   }
@@ -585,16 +554,11 @@ export function injectStyles() {
   if (injected || !document.body) {
     return;
   }
-  const libStyle = document.createElement('style');
+  const libStyle = document.createElement("style");
   libStyle.innerHTML = LIB_STYLE;
   document.body.appendChild(libStyle);
-  const basicStyle = document.createElement('style');
+  const basicStyle = document.createElement("style");
   basicStyle.innerHTML = BASIC_STYLE;
   document.body.appendChild(basicStyle);
   injected = true;
-}
-
-/** 测试辅助：重置注入状态 */
-export function resetInjectedForTest() {
-  injected = false;
 }

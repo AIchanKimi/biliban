@@ -3,8 +3,8 @@
 // v2 → v3 语义：usernames 与 keywords 合并为 words。
 // v3 → v4：全局 duration 开关转为一条时长词条 {op:'lt', seconds, scopes:['global']}（关闭则无）。
 // v4 → v5：取消 builtinRules 双轨——内置规则并入 rules，与自定义规则完全同构。
-import { CONFIG_VERSION, BUILTIN_RULES_VERSION } from './defaults.js';
-import { BUILTIN_RULES } from '../rules/builtin-rules.js';
+import { CONFIG_VERSION, BUILTIN_RULES_VERSION } from "./defaults.js";
+import { BUILTIN_RULES } from "../rules/builtin-rules.js";
 
 /**
  * @param {unknown} rawConfig
@@ -23,8 +23,8 @@ function toGlobalEntries(list) {
   const source = Array.isArray(list) ? list : [];
   const entries = [];
   for (const item of source) {
-    if (typeof item === 'string' && item !== '') {
-      entries.push({ value: item, scopes: ['global'] });
+    if (typeof item === "string" && item !== "") {
+      entries.push({ value: item, scopes: ["global"] });
     }
   }
   return entries;
@@ -39,7 +39,7 @@ function dedupeEntries(entries) {
   const seen = new Set();
   const result = [];
   for (const entry of entries) {
-    const scopes = Array.isArray(entry.scopes) ? entry.scopes : ['global'];
+    const scopes = Array.isArray(entry.scopes) ? entry.scopes : ["global"];
     const key = JSON.stringify([entry.value, [...scopes].sort()]);
     if (!seen.has(key)) {
       seen.add(key);
@@ -52,19 +52,21 @@ function dedupeEntries(entries) {
 /** v2/v3 词条对象数组 → 词条（宽松强制，normalize 再精修） */
 function fromObjectList(list) {
   const source = Array.isArray(list) ? list : [];
-  return source.filter(entry => entry && typeof entry.value === 'string' && entry.value !== '');
+  return source.filter(
+    (entry) => entry && typeof entry.value === "string" && entry.value !== "",
+  );
 }
 
 /** v3 的全局 duration 开关 → 时长词条数组 */
 function durationFromV3(duration) {
-  if (!duration || typeof duration !== 'object' || !duration.enable) {
+  if (!duration || typeof duration !== "object" || !duration.enable) {
     return [];
   }
   const min = Number(duration.minSeconds);
   if (!Number.isFinite(min) || min <= 0) {
     return [];
   }
-  return [{ op: 'lt', seconds: min, scopes: ['global'] }];
+  return [{ op: "lt", seconds: min, scopes: ["global"] }];
 }
 
 /**
@@ -78,16 +80,25 @@ function durationFromV3(duration) {
  * @param {unknown} storedBuiltinVersion
  * @returns {Array<object>}
  */
-export function mergeRulesWithBuiltins(customRules, storedBuiltins, storedBuiltinVersion) {
-  const builtinBase = Array.isArray(storedBuiltins) ? [...storedBuiltins] : [...BUILTIN_RULES];
+export function mergeRulesWithBuiltins(
+  customRules,
+  storedBuiltins,
+  storedBuiltinVersion,
+) {
+  const builtinBase = Array.isArray(storedBuiltins)
+    ? [...storedBuiltins]
+    : [...BUILTIN_RULES];
   if (storedBuiltinVersion !== BUILTIN_RULES_VERSION) {
     for (const rule of BUILTIN_RULES) {
-      if (!builtinBase.some(item => item && item.id === rule.id)) {
+      if (!builtinBase.some((item) => item && item.id === rule.id)) {
         builtinBase.push(rule);
       }
     }
   }
-  const merged = [...builtinBase, ...(Array.isArray(customRules) ? customRules : [])];
+  const merged = [
+    ...builtinBase,
+    ...(Array.isArray(customRules) ? customRules : []),
+  ];
   const seen = new Set();
   const result = [];
   for (const rule of merged) {
@@ -113,7 +124,11 @@ export function migrateToLatest(rawConfig) {
       enable: source.enable ?? true,
       words: dedupeEntries(fromObjectList(source.words)),
       durations: Array.isArray(source.durations) ? source.durations : [],
-      rules: mergeRulesWithBuiltins(source.rules, source.builtinRules, source.builtinVersion),
+      rules: mergeRulesWithBuiltins(
+        source.rules,
+        source.builtinRules,
+        source.builtinVersion,
+      ),
     };
   }
   if (source.version === 3) {
@@ -129,7 +144,10 @@ export function migrateToLatest(rawConfig) {
     return {
       version: CONFIG_VERSION,
       enable: source.enable ?? true,
-      words: dedupeEntries([...fromObjectList(source.usernames), ...fromObjectList(source.keywords)]),
+      words: dedupeEntries([
+        ...fromObjectList(source.usernames),
+        ...fromObjectList(source.keywords),
+      ]),
       durations: durationFromV3(source.duration),
       rules: mergeRulesWithBuiltins(source.rules, undefined, undefined),
     };

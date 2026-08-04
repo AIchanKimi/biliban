@@ -1,18 +1,19 @@
-// 临时词条（v5.5 过期制）：独立存储键 TEMP_KEY，带 expiresAt 过期时间（默认 24 小时）。
+// 临时词条（v5.5 过期制）：独立存储键 TEMP_KEY，带 expiresAt 过期时间（v6.5 起固定 1 小时）。
 // 刷新不丢、跨标签页同步（storage.onChanged）；到期自动清除。
 // 词条分 kind：'word'（屏蔽词 {value}）与 'duration'（时长词条 {op, seconds}）。
-import { TEMP_KEY, TEMP_DEFAULT_HOURS } from './defaults.js';
-import { normalizeScopes } from './scopes.js';
-import { canonicalJson } from './store.js';
+import { TEMP_KEY, TEMP_DEFAULT_HOURS } from "./defaults.js";
+import { normalizeScopes } from "./scopes.js";
+import { canonicalJson } from "./store.js";
 
-const KINDS = ['word', 'duration'];
+const KINDS = ["word", "duration"];
 
 let tempEntries = []; // 内存镜像（含未过期与已到期的，读取时过滤）
-let lastSavedJson = '';
+let lastSavedJson = "";
 
 /** 词条身份键：kind + 内容 + 作用域集合（序无关） */
 function entryKey(entry) {
-  const payload = entry.kind === 'duration' ? [entry.op, entry.seconds] : [entry.value];
+  const payload =
+    entry.kind === "duration" ? [entry.op, entry.seconds] : [entry.value];
   return JSON.stringify([entry.kind, ...payload, [...entry.scopes].sort()]);
 }
 
@@ -25,17 +26,21 @@ function sanitizeItem(item) {
     return null;
   }
   let base = null;
-  if (item.kind === 'word') {
-    if (typeof item.value !== 'string' || item.value === '') {
+  if (item.kind === "word") {
+    if (typeof item.value !== "string" || item.value === "") {
       return null;
     }
-    base = { kind: 'word', value: item.value };
+    base = { kind: "word", value: item.value };
   } else {
     const seconds = Number(item.seconds);
-    if ((item.op !== 'lt' && item.op !== 'gt') || !Number.isFinite(seconds) || seconds <= 0) {
+    if (
+      (item.op !== "lt" && item.op !== "gt") ||
+      !Number.isFinite(seconds) ||
+      seconds <= 0
+    ) {
       return null;
     }
-    base = { kind: 'duration', op: item.op, seconds };
+    base = { kind: "duration", op: item.op, seconds };
   }
   const result = { ...base, scopes: normalizeScopes(item.scopes) };
   const expiresAt = Number(item.expiresAt);
@@ -46,7 +51,7 @@ function sanitizeItem(item) {
 }
 
 function isFresh(entry, now) {
-  return typeof entry.expiresAt !== 'number' || entry.expiresAt > now;
+  return typeof entry.expiresAt !== "number" || entry.expiresAt > now;
 }
 
 async function persist(entries) {
@@ -65,7 +70,7 @@ export async function initTempStore() {
 /** 清除过期词条；有变更时写回。 @returns {Promise<number>} 清除条数 */
 export async function pruneExpired() {
   const now = Date.now();
-  const fresh = tempEntries.filter(entry => isFresh(entry, now));
+  const fresh = tempEntries.filter((entry) => isFresh(entry, now));
   const removed = tempEntries.length - fresh.length;
   tempEntries = fresh;
   if (removed > 0) {
@@ -77,7 +82,9 @@ export async function pruneExpired() {
 /** @returns {Array<object>} 未过期词条的副本 */
 export function getTempEntries() {
   const now = Date.now();
-  return tempEntries.filter(entry => isFresh(entry, now)).map(entry => ({ ...entry, scopes: [...entry.scopes] }));
+  return tempEntries
+    .filter((entry) => isFresh(entry, now))
+    .map((entry) => ({ ...entry, scopes: [...entry.scopes] }));
 }
 
 /**
@@ -87,7 +94,7 @@ export function getTempEntries() {
  */
 export async function addTempEntries(items, hours = TEMP_DEFAULT_HOURS) {
   const now = Date.now();
-  const next = [...tempEntries.filter(entry => isFresh(entry, now))];
+  const next = [...tempEntries.filter((entry) => isFresh(entry, now))];
   for (const item of items ?? []) {
     const candidate = sanitizeItem(item);
     if (!candidate) {
@@ -96,7 +103,7 @@ export async function addTempEntries(items, hours = TEMP_DEFAULT_HOURS) {
     if (!candidate.expiresAt) {
       candidate.expiresAt = now + hours * 3600_000;
     }
-    if (!next.some(existing => entryKey(existing) === entryKey(candidate))) {
+    if (!next.some((existing) => entryKey(existing) === entryKey(candidate))) {
       next.push(candidate);
     }
   }
@@ -121,27 +128,12 @@ export async function setTempEntries(items, hours = TEMP_DEFAULT_HOURS) {
     if (!candidate.expiresAt) {
       candidate.expiresAt = now + hours * 3600_000;
     }
-    if (!next.some(existing => entryKey(existing) === entryKey(candidate))) {
+    if (!next.some((existing) => entryKey(existing) === entryKey(candidate))) {
       next.push(candidate);
     }
   }
   tempEntries = next;
   await persist(next);
-}
-
-/**
- * 按作用域清空（面板标签页内的「清空临时词」：屏蔽词与时长词条一起清）。
- * @param {string} scope
- */
-export async function removeTempEntriesByScope(scope) {
-  const next = tempEntries.filter(entry => !entry.scopes.includes(scope));
-  tempEntries = next;
-  await persist(next);
-}
-
-export async function clearTempEntries() {
-  tempEntries = [];
-  await persist([]);
 }
 
 /**
@@ -151,14 +143,16 @@ export async function clearTempEntries() {
  */
 export function subscribeTemp(onChange) {
   const listener = (changes, areaName) => {
-    if (areaName !== 'local' || !changes[TEMP_KEY]) {
+    if (areaName !== "local" || !changes[TEMP_KEY]) {
       return;
     }
     const newValue = changes[TEMP_KEY].newValue;
     if (canonicalJson(newValue) === lastSavedJson) {
       return;
     }
-    tempEntries = (Array.isArray(newValue) ? newValue : []).map(sanitizeItem).filter(Boolean);
+    tempEntries = (Array.isArray(newValue) ? newValue : [])
+      .map(sanitizeItem)
+      .filter(Boolean);
     onChange();
   };
   chrome.storage.onChanged.addListener(listener);
@@ -173,10 +167,15 @@ export function subscribeTemp(onChange) {
  */
 export function getEffectiveEntries(persistentEntries, kind) {
   const now = Date.now();
-  const keyOf = entry => JSON.stringify(
-    kind === 'duration' ? [entry.op, entry.seconds, [...entry.scopes].sort()] : [entry.value, [...entry.scopes].sort()]
-  );
-  const persistent = (Array.isArray(persistentEntries) ? persistentEntries : []).map(entry => ({ ...entry, scopes: [...entry.scopes] }));
+  const keyOf = (entry) =>
+    JSON.stringify(
+      kind === "duration"
+        ? [entry.op, entry.seconds, [...entry.scopes].sort()]
+        : [entry.value, [...entry.scopes].sort()],
+    );
+  const persistent = (
+    Array.isArray(persistentEntries) ? persistentEntries : []
+  ).map((entry) => ({ ...entry, scopes: [...entry.scopes] }));
   const seen = new Set(persistent.map(keyOf));
   const merged = [...persistent];
   for (const entry of tempEntries) {
@@ -189,7 +188,7 @@ export function getEffectiveEntries(persistentEntries, kind) {
       merged.push({ ...entry, scopes: [...entry.scopes] });
     }
   }
-  return merged.map(entry => {
+  return merged.map((entry) => {
     const copy = { ...entry };
     delete copy.kind;
     delete copy.expiresAt;
@@ -205,7 +204,7 @@ export function getEffectiveEntries(persistentEntries, kind) {
 export function mergeTempEntries(runtimeConfig) {
   return {
     ...runtimeConfig,
-    words: getEffectiveEntries(runtimeConfig.words, 'word'),
-    durations: getEffectiveEntries(runtimeConfig.durations, 'duration'),
+    words: getEffectiveEntries(runtimeConfig.words, "word"),
+    durations: getEffectiveEntries(runtimeConfig.durations, "duration"),
   };
 }

@@ -1,11 +1,11 @@
 // 生成占位扩展图标：#00A1D6 圆角底 + 白色禁止符号（屏蔽语义）。
 // 手工构造 PNG（IHDR/IDAT/IEND + zlib），无第三方依赖。
-import { deflateSync } from 'node:zlib';
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { deflateSync } from "node:zlib";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ICON_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'icons');
+const ICON_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "icons");
 const SIZES = [16, 32, 48, 128];
 
 const BG = [0x00, 0xa1, 0xd6]; // #00A1D6
@@ -35,7 +35,7 @@ function crc32(buffer) {
 function chunk(type, data) {
   const length = Buffer.alloc(4);
   length.writeUInt32BE(data.length);
-  const typeBuffer = Buffer.from(type, 'ascii');
+  const typeBuffer = Buffer.from(type, "ascii");
   const crcInput = Buffer.concat([typeBuffer, data]);
   const crc = Buffer.alloc(4);
   crc.writeUInt32BE(crc32(crcInput));
@@ -47,9 +47,12 @@ function isTransparent(x, y, size) {
   const radius = size / 8;
   const corner = (cx, cy) => (x - cx) ** 2 + (y - cy) ** 2 > radius ** 2;
   if (x < radius && y < radius) return corner(radius, radius);
-  if (x >= size - radius && y < radius) return corner(size - radius - 1, radius);
-  if (x < radius && y >= size - radius) return corner(radius, size - radius - 1);
-  if (x >= size - radius && y >= size - radius) return corner(size - radius - 1, size - radius - 1);
+  if (x >= size - radius && y < radius)
+    return corner(size - radius - 1, radius);
+  if (x < radius && y >= size - radius)
+    return corner(radius, size - radius - 1);
+  if (x >= size - radius && y >= size - radius)
+    return corner(size - radius - 1, size - radius - 1);
   return false;
 }
 
@@ -101,9 +104,9 @@ function makeIcon(size) {
 
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0)),
   ]);
 }
 

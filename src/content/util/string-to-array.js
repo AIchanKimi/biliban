@@ -10,19 +10,19 @@ const FLAG_RE = /[a-z]/i;
  * @returns {string[]}
  */
 export function stringToArray(textString) {
-  const text = String(textString ?? '');
+  const text = String(textString ?? "");
   const parts = [];
-  let current = '';
+  let current = "";
   let inRegex = false;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (inRegex) {
       current += ch;
-      if (ch === '\\') {
+      if (ch === "\\") {
         if (i + 1 < text.length) {
           current += text[++i];
         }
-      } else if (ch === '/') {
+      } else if (ch === "/") {
         inRegex = false;
         while (i + 1 < text.length && FLAG_RE.test(text[i + 1])) {
           current += text[++i]; // 闭合 / 后的修饰符（i/g/m…）
@@ -30,14 +30,14 @@ export function stringToArray(textString) {
       }
       continue;
     }
-    if (ch === '/' && current.trim() === '') {
+    if (ch === "/" && current.trim() === "") {
       inRegex = true;
       current += ch;
       continue;
     }
-    if (ch === ',') {
+    if (ch === ",") {
       parts.push(current);
-      current = '';
+      current = "";
       continue;
     }
     current += ch;
