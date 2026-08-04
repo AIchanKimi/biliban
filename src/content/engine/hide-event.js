@@ -1,64 +1,78 @@
-// hideEvent —— 屏蔽执行总编排。逐字对等 target.js 1146–1343。
-// 结构：38 条规则循环（URL 门控）→ 页面特殊分支（www/动态/消息中心/直播间）。
-// 文档化改进：每个元素的处理包 try/catch —— 单条坏选择器（如 '> a' 或 :has 不支持）
-// 不中止其余元素与后续规则；原脚本会整体中断。
-import { HANDLER_RULES } from '../rules/handler-table.js';
-import { ruleMatchesUrl, pageBranchFor } from './url-gate.js';
+// hideEvent —— 屏蔽执行总编排（v5）。
+// 实时页面分类（SPA 修复）→ 内置 + 自定义规则统一循环：
+//   mode:'hide'  直接隐藏（禁用时解除）；resolve:'bv' 走异步查询；
+//   mode:'match' 提取用户名/标题 → hideHandler（词条判定 + 时长兜底）。
+import { BUILTIN_RULES } from '../rules/builtin-rules.js';
+import { categoryFor } from './category.js';
+import { scopesApply } from '../config/scopes.js';
 import { extractEle } from '../dom/extract-ele.js';
 import { getBvNumber } from '../dom/bv.js';
+import { hideOperation } from '../dom/hide-operation.js';
 
 /**
  * @param {{
- *   oldUrl: string,
- *   hideHandler: Function,
- *   resolveUsername: Function,
- *   pages: { www?: {run():void}, dynamics?: {run():void}, messageReply?: {run():void}, liveChat?: {run():void}, hideComment: () => void },
+ *   getConfig: () => Readonly<Record<string, unknown>>,  // 运行时有效配置（含临时词条与自定义规则）
+ *   hideHandler: (itemNode, username, textValue, method?) => void,
+ *   resolveUsername: (bvNum: string | null, ele: Element, textEle: Element | null) => void,
+ *   homeExtra: { run: () => void },
  * }} deps
  * @returns {() => void}
  */
 export function createHideEvent(deps) {
-  const { oldUrl, hideHandler, resolveUsername, pages } = deps;
+  const { getConfig, hideHandler, resolveUsername, homeExtra } = deps;
 
   return function hideEvent() {
-    HANDLER_RULES.forEach(item => {
-      const { c, index, user, text, method, type, userReg, url, comment, bv } = item;
-      if (!ruleMatchesUrl(item, oldUrl)) {
-        return;
+    const config = getConfig();
+    const category = categoryFor(location.href);
+    if (!category) {
+      return;
+    }
+    const rules = [...BUILTIN_RULES, ...(config.rules ?? [])];
+    for (const rule of rules) {
+      const enabled = rule.enabled !== false;
+      // mode:'hide' 禁用时仍需执行以解除已施加的隐藏
+      if (!enabled && rule.mode !== 'hide') {
+        continue;
+      }
+      if (!scopesApply(rule.scopes, category)) {
+        continue;
       }
       let all;
       try {
-        all = document.querySelectorAll(index);
+        all = document.querySelectorAll(rule.selector);
       } catch (e) {
-        console.error('[bilibili_block] 选择器执行失败: ', index, e);
-        return;
+        console.error('[bilibili_block] 选择器执行失败: ', rule.selector, e);
+        continue;
       }
       for (const ele of all) {
         try {
-          if (c == 1) {
-            hideHandler(ele, extractEle(ele, user).textContent.replace(userReg, ''));
-          } else if (c == 2) {
-            const bvNum = getBvNumber(ele.querySelector(bv).href);
-            resolveUsername(bvNum, ele, extractEle(ele, text));
-          } else {
-            hideHandler(ele, extractEle(ele, user), extractEle(ele, text), method, type);
+          if (rule.mode === 'hide') {
+            hideOperation(ele, enabled, rule.method ?? 0);
+            continue;
           }
+          if (rule.resolve === 'bv') {
+            const link = rule.bvSelector ? ele.querySelector(rule.bvSelector) : null;
+            if (link) {
+              resolveUsername(getBvNumber(link.href), ele, extractEle(ele, rule.titleSelector));
+            }
+            continue;
+          }
+          let username = null;
+          if (rule.userSelector) {
+            const userEl = extractEle(ele, rule.userSelector);
+            if (userEl) {
+              username = rule.userReg ? userEl.textContent.replace(rule.userReg, '') : userEl;
+            }
+          }
+          const titleEl = rule.titleSelector ? extractEle(ele, rule.titleSelector) : null;
+          hideHandler(ele, username, titleEl, rule.method ?? 0);
         } catch (e) {
-          console.error('[bilibili_block] 元素处理失败: ', index, e);
+          console.error('[bilibili_block] 元素处理失败: ', rule.selector, e);
         }
       }
-      if (comment) {
-        pages.hideComment();
-      }
-    });
-    const branch = pageBranchFor(oldUrl);
-    if (branch === 'www') {
-      pages.www.run();
-    } else if (branch === 'dynamics') {
-      pages.dynamics.run();
-    } else if (branch === 'message') {
-      pages.messageReply.run();
-    } else if (branch === 'live') {
-      pages.liveChat.run();
+    }
+    if (category === 'home' || category === 'video') {
+      homeExtra.run();
     }
   };
 }
