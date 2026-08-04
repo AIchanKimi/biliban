@@ -89,6 +89,7 @@ test.describe('自定义规则（目标元素编辑）', () => {
     await page.waitForTimeout(700);
     await page.locator('#blockObj_bilibiliConfig_expandSpan').click();
     await page.locator('#bilibiliConfig_tab_play').click();
+    await page.locator('#bilibiliConfig_rulesToggle_play').click(); // 展开折叠的规则区
     const row = page.locator('#bilibiliConfig_pane_play .block_obj_rule_row[data-rule-id="r-match"]');
     await row.locator('label').first().click(); // 取消启用
     await page.locator("xpath=//span[@title='仅保存设置']").click();

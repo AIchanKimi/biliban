@@ -130,12 +130,32 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
+  test('规则区默认整体折叠，点「规则」开关展开/收起（v6.3）', async () => {
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
+    await openPanel(page);
+    await page.locator('#bilibiliConfig_tab_play').click();
+    const cardRow = page.locator('#bilibiliConfig_pane_play .block_obj_rule_row[data-rule-id="builtin-bili-video-card"]');
+    // 默认折叠：规则行不可见；头部开关与「添加规则」常驻可见
+    await expect(cardRow).not.toBeVisible();
+    await expect(page.locator('#bilibiliConfig_rulesToggle_play')).toBeVisible();
+    await expect(page.locator('#bilibiliConfig_rules_play').getByText('添加规则', { exact: true })).toBeVisible();
+    // 展开 → 行可见；再点 → 收起
+    await page.locator('#bilibiliConfig_rulesToggle_play').click();
+    await expect(cardRow).toBeVisible();
+    await page.locator('#bilibiliConfig_rulesToggle_play').click();
+    await expect(cardRow).not.toBeVisible();
+    await page.close();
+  });
+
   test('内置规则展示 + 命中统计徽标（找到 N · 隐藏 M，命中高亮）', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await openPanel(page);
     await page.locator('#bilibiliConfig_tab_play').click();
-    // builtin-bili-video-card 属播放分类，行在「播放」标签；规则行默认收起（概览）
+    // v6.3：规则区整体默认折叠，先点「规则」开关展开；行本身默认收起（概览）
+    await page.locator('#bilibiliConfig_rulesToggle_play').click();
+    // builtin-bili-video-card 属播放分类，行在「播放」标签
     const cardRow = page.locator('#bilibiliConfig_pane_play .block_obj_rule_row[data-rule-id="builtin-bili-video-card"]');
     await expect(cardRow).toBeVisible();
     await expect(cardRow.locator('.block_obj_rule_summary')).toContainText('bili-video-card');
@@ -172,6 +192,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await openPanel(page);
     await page.locator('#bilibiliConfig_tab_play').click();
+    await page.locator('#bilibiliConfig_rulesToggle_play').click(); // 展开折叠的规则区
 
     // 编辑视频页右侧推荐行：默认收起，先点「编辑」展开再改选择器
     const pageCardRow = page.locator('#bilibiliConfig_pane_play .block_obj_rule_row[data-rule-id="builtin-video-page-card"]');

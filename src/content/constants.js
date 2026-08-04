@@ -70,6 +70,11 @@ export const RULE_STATS_HIT_CLASS = 'block_obj_rule_stats_hit';
 export const RULE_EDIT_CLASS = 'block_obj_rule_edit';
 export const LI_WORDS_CLASS = 'block_obj_li_words';
 
+// v6.3 规则区折叠控件
+export const RULES_HEADER_CLASS = 'block_obj_rules_header';
+export const RULES_TOGGLE_CLASS = 'block_obj_rules_toggle';
+export const RULES_BODY_CLASS = 'block_obj_rules_body';
+
 // 时序（毫秒）
 export const SAVE_FLASH_MS = 1000; // 「已保存」文本闪烁
 export const BUTTON_FLASH_MS = 1000; // buttonClicked title 闪烁

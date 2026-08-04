@@ -1,6 +1,6 @@
 // 面板分节：单个作用域标签页的内容（屏蔽词组 + 自定义规则组 + 清空临时词）。
 // 作用域由标签页承载，组内不再出现作用域选择。
-import { FIELD_ID_PREFIX, SCOPE_PANE_CLASS, UL_NODE_CLASS, SEPARATOR_LI_CLASS, SEPARATOR_TEXT_CLASS, LIST_DIV_CLASS, LI_WORDS_CLASS } from '../../constants.js';
+import { FIELD_ID_PREFIX, SCOPE_PANE_CLASS, UL_NODE_CLASS, LIST_DIV_CLASS, LI_WORDS_CLASS } from '../../constants.js';
 import { createEntriesGroup } from './entries.js';
 import { createDurationsGroup } from './durations.js';
 import { createRulesGroup } from './rules.js';
@@ -51,14 +51,7 @@ export function createScopePane(params) {
 
   let rulesGroup = null;
   if (rulesAllowed) {
-    const ruleSeparator = document.createElement('li');
-    ruleSeparator.className = SEPARATOR_LI_CLASS;
-    const ruleSeparatorText = document.createElement('span');
-    ruleSeparatorText.className = SEPARATOR_TEXT_CLASS;
-    ruleSeparatorText.textContent = '规则（B 站改版后在此改选择器）：';
-    ruleSeparatorText.title = '规则教扩展认识本页面的卡片容器；无需修改扩展代码';
-    ruleSeparator.appendChild(ruleSeparatorText);
-
+    // v6.3：规则区整体默认折叠，头部「规则」开关按需展开
     rulesGroup = createRulesGroup({ scope, rules });
     const rulesLi = document.createElement('li');
     const rulesDiv = document.createElement('div');
@@ -67,7 +60,7 @@ export function createScopePane(params) {
     rulesDiv.appendChild(rulesGroup.container);
     rulesLi.appendChild(rulesDiv);
 
-    extraLis.push(ruleSeparator, rulesLi);
+    extraLis.push(rulesLi);
   }
 
   const clearTempLi = document.createElement('li');

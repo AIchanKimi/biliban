@@ -1,9 +1,10 @@
-// 设置面板主体（v5.1 标签页式管理）。保留壳行为：
-//   - 520px 固定面板，bottom 6vh，right 0↔-530px 0.8s 滑入滑出
-//   - 底部三按钮：保存并关闭 / 仅保存（闪「已保存」1s）/ 取消（收起后 800ms 按上次已保存重建）
+// 设置面板主体（v5.1 标签页式管理，v6.3 shadcn 风格白底重绘）。保留壳行为：
+//   - 520px 固定面板，bottom 6vh，right 0↔-530px 滑入滑出
+//   - 底部按钮：保存并关闭 / 仅保存（闪「已保存」1s）/ 取消（收起后 800ms 按上次已保存重建）
+//     / 导出设置 / 导入设置
 //   - rebuild 用于「取消」与多标签页远端同步
-// 结构：通用（总开关/时长）→ 分类标签栏（全局/首页/视频页/搜索/动态/空间）
-//       → 每个分类一个面板页：用户名组 + 关键字组 + 自定义规则组 + 清空临时词。
+// 结构：通用（总开关）→ 分类标签栏（全局/搜索/空间/播放/收藏）
+//       → 每个分类一个面板页：屏蔽词组 + 时长组 + 规则组（默认折叠）+ 清空临时词。
 // 收集语义：临时词条回写 temp-store（不落盘），持久词条进存储对象。
 import {
   BLOCK_OBJ_ID,
@@ -19,8 +20,6 @@ import {
   TOOLS_BUTTON_CLASS,
   SAVE_FLASH_MS,
   CANCEL_REBUILD_MS,
-  SEPARATOR_LI_CLASS,
-  SEPARATOR_TEXT_CLASS,
   TAB_BAR_CLASS,
   TAB_CLASS,
   TAB_ACTIVE_CLASS,
@@ -104,14 +103,6 @@ export function createPanel(deps) {
     }
 
     // ---- 分类标签栏 ----
-    const tabSeparator = document.createElement('li');
-    tabSeparator.className = SEPARATOR_LI_CLASS;
-    const tabSeparatorText = document.createElement('span');
-    tabSeparatorText.className = SEPARATOR_TEXT_CLASS;
-    tabSeparatorText.textContent = '按页面分类管理（「全局」覆盖全部已匹配页面：屏蔽词+时长；规则归各具体分类）：';
-    tabSeparator.appendChild(tabSeparatorText);
-    ulNode.appendChild(tabSeparator);
-
     const tabBarLi = document.createElement('li');
     const tabBar = document.createElement('div');
     tabBar.className = TAB_BAR_CLASS;

@@ -1,19 +1,29 @@
 // 面板分节：规则组（归属某作用域标签页）。
 // v6.1：内置与自定义规则完全同构——同一列表、同一编辑器，无「内置」区分。
-// 行默认收起（概览 + 统计徽标 + 编辑/删除）；点「编辑」展开编辑区，避免整屏输入框。
+// v6.3：规则区整体默认折叠（头部「规则」开关展开）；行亦默认收起
+// （概览 + 统计徽标 + 编辑/删除），点「编辑」展开编辑区，避免整屏输入框。
 // 规则模型：卡片容器选择器 + 文字选择器数组（可多个）+ 时长选择器（可选）。
 // 模式：按屏蔽词过滤（match，默认）/ 直接隐藏（hide）。
 import {
+  FIELD_ID_PREFIX,
   INPUT_CLASS,
   SELECT_CLASS,
+  LI_HIDE_CLASS,
   RULE_ROW_CLASS,
   RULE_EDIT_CLASS,
   RULE_STATS_CLASS,
+  RULES_HEADER_CLASS,
+  RULES_TOGGLE_CLASS,
+  RULES_BODY_CLASS,
   CHECKBOX_INPUT_CLASS,
   CHECKBOX_LABEL_CLASS,
 } from '../../constants.js';
 import { getRuleStats } from '../../engine/rule-stats.js';
 import { createSpanBtn } from '../input-row.js';
+
+/** 折叠开关箭头字符 */
+const CHEVRON_COLLAPSED = '▸';
+const CHEVRON_EXPANDED = '▾';
 
 /** 模式下拉选项：value → 显示文案 */
 export const MODE_LABELS = Object.freeze([
@@ -177,22 +187,52 @@ export function createRuleRow(rule = {}) {
 
 /**
  * 某作用域下的规则组（内置与自定义同一列表渲染）。
+ * v6.3：整组默认折叠——头部「规则」开关切换主体显隐；「添加规则」常驻头部，点击先展开再追加。
  * @param {{ scope: string, rules: ReadonlyArray<Record<string, unknown>> }} params
  * @returns {{ container: HTMLElement, collect: () => { rules: Array<Record<string, unknown>> } }}
  */
 export function createRulesGroup({ scope, rules }) {
   const container = document.createElement('div');
 
+  // ---- 头部：折叠开关 + 添加规则 ----
+  const header = document.createElement('div');
+  header.className = RULES_HEADER_CLASS;
+  const toggle = document.createElement('span');
+  toggle.className = RULES_TOGGLE_CLASS;
+  toggle.id = FIELD_ID_PREFIX + 'rulesToggle_' + scope;
+  toggle.title = '规则教扩展认识本页面的卡片容器；B 站改版后在此改选择器，无需修改扩展代码';
+  const chevron = document.createElement('span');
+  chevron.className = 'block_obj_rules_chevron';
+  chevron.textContent = CHEVRON_COLLAPSED;
+  const toggleLabel = document.createElement('span');
+  toggleLabel.textContent = '规则';
+  toggle.appendChild(chevron);
+  toggle.appendChild(toggleLabel);
+
+  // ---- 主体：规则行列表（默认折叠）----
+  const body = document.createElement('div');
+  body.className = RULES_BODY_CLASS + ' ' + LI_HIDE_CLASS;
+  const setExpanded = expanded => {
+    body.classList.toggle(LI_HIDE_CLASS, !expanded);
+    chevron.textContent = expanded ? CHEVRON_EXPANDED : CHEVRON_COLLAPSED;
+  };
+  toggle.addEventListener('click', () => setExpanded(body.classList.contains(LI_HIDE_CLASS)));
+
   for (const rule of rules ?? []) {
     if (rule.scopes.includes(scope)) {
-      container.appendChild(createRuleRow(rule));
+      body.appendChild(createRuleRow(rule));
     }
   }
   const addBtn = createSpanBtn('添加规则', '新增一条本页面分类下的规则', () => {
-    container.appendChild(createRuleRow({}));
+    setExpanded(true);
+    body.appendChild(createRuleRow({}));
   });
   addBtn.classList.add('block_obj_rule_add_btn');
-  container.appendChild(addBtn);
+
+  header.appendChild(toggle);
+  header.appendChild(addBtn);
+  container.appendChild(header);
+  container.appendChild(body);
 
   /** 行 → 规则对象；选择器为空视为放弃该行 */
   function collectRow(rowEl) {
