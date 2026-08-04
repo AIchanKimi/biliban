@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Fixture: 动态与评论</title>
+  </head>
+  <body>
+    <div class="card" data-test="dyn-title">
+      <div class="title">动态视频标题广告</div>
+      <div class="content-full">正文内容一</div>
+    </div>
+    <div class="card" data-test="dyn-content">
+      <div class="title">正常动态标题</div>
+      <div class="content-full">正文含垃圾词</div>
+    </div>
+    <div class="card" data-test="dyn-repost">
+      <div class="title">转发动态标题</div>
+      <div class="repost">
+        <span class="username">讨厌的UP</span>
+        <div class="content-full">被转发的内容</div>
+      </div>
+    </div>
+    <div class="card" data-test="dyn-clean">
+      <div class="title">完全正常动态</div>
+      <div class="content-full">完全正常正文</div>
+    </div>
+    <div class="reply-list">
+      <div class="reply-item" data-test="comment-blocked-user">
+        <a class="user-name">讨厌的UP</a>
+        <div class="reply-content">评论正文一</div>
+        <span class="reply-btn">回复</span>
+      </div>
+      <div class="reply-item" data-test="comment-emoji">
+        <a class="user-name">正常用户</a>
+        <div class="reply-content">送你<img alt="[鸡腿]" src="emoji.png" /></div>
+        <span class="reply-btn">回复</span>
+      </div>
+      <div class="reply-item" data-test="comment-with-sub">
+        <a class="user-name">正常用户二</a>
+        <div class="reply-content">主评论内容正常</div>
+        <span class="reply-btn">回复</span>
+        <div class="sub-reply-list">
+          <div class="sub-reply-item">
+            <a class="sub-user-name">子回复用户</a>
+            <div class="reply-content">子回复垃圾内容</div>
+            <span class="sub-reply-btn">回复</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
