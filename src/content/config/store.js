@@ -38,10 +38,15 @@ export function canonicalJson(value) {
  * @returns {Readonly<{ value: string, scopes: ReadonlyArray<string> }> | null}
  */
 function sanitizeEntry(entry) {
-  if (!entry || typeof entry.value !== 'string' || entry.value === '') {
+  if (!entry || typeof entry.value !== 'string') {
     return null;
   }
-  return Object.freeze({ value: entry.value, scopes: Object.freeze(normalizeScopes(entry.scopes)) });
+  // v6.2：存量归一 trim（旧数据载入即清理）
+  const value = entry.value.trim();
+  if (value === '') {
+    return null;
+  }
+  return Object.freeze({ value, scopes: Object.freeze(normalizeScopes(entry.scopes)) });
 }
 
 /**

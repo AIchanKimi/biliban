@@ -55,16 +55,16 @@ export function createHideEvent(deps) {
             hideOperation(ele, false, rule.method ?? 0);
             continue;
           }
-          // 文字选择器数组逐个提取，拼接后交给屏蔽词匹配
+          // v6.2：文字选择器逐个提取为独立字段（去空白项），交给屏蔽词字段化匹配
           const texts = [];
           for (const textSelector of rule.textSelectors ?? []) {
             const textEl = extractEle(ele, textSelector);
-            if (textEl) {
-              texts.push(textEl.textContent);
+            const text = textEl ? textEl.textContent.trim() : '';
+            if (text) {
+              texts.push(text);
             }
           }
-          const joined = texts.length > 0 ? texts.join('\n') : null;
-          if (hideHandler(ele, null, joined, rule.method ?? 0, rule.durationSelector ?? '')) {
+          if (hideHandler(ele, texts, rule.method ?? 0, rule.durationSelector ?? '')) {
             hiddenCount++;
           }
         } catch (e) {

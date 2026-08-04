@@ -114,7 +114,8 @@ export function createEntriesGroup(params) {
     const dataset = temp
       ? { expiresAt: String(Date.now() + Number(tempHoursSelect.value) * 3600_000) }
       : undefined;
-    const values = stringToArray(textValue).filter(isValidNewEntry);
+    // v6.2：输入值 trim（trim 后为空则丢弃）
+    const values = stringToArray(textValue).map(value => value.trim()).filter(isValidNewEntry);
     if (values.length === 0) {
       return false;
     }

@@ -1,6 +1,6 @@
 {
   "name": "biliban",
-  "version": "6.1.1",
+  "version": "6.2.0",
   "private": true,
   "type": "module",
   "description": "哔哩哔哩 - 屏蔽指定内容（浏览器扩展；源自油猴脚本 v4.8.0，v5 按需重构）",

@@ -233,6 +233,23 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
+  test('输入带首尾空格的词 → 落盘为 trim 后的值', async () => {
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
+    await openPanel(page);
+    await page.fill('#bilibiliConfig_wordInput_global', '  带空格的词  ');
+    await page
+      .locator("xpath=//input[@id='bilibiliConfig_wordInput_global']/following::span[text()='添加'][1]")
+      .click();
+    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await expect
+      .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).words)
+      .toEqual(expect.arrayContaining([{ value: '带空格的词', scopes: ['global'] }]));
+    // 还原
+    await seedConfig(toolsPage, { version: 5, enable: true, words: [], durations: [], rules: [] });
+    await page.close();
+  });
+
   test('无文字选择器的 match 规则照常保存（纯时长规则不再被静默丢弃）', async () => {
     // 预置一条全局时长词条：短于 60 秒
     await seedConfig(toolsPage, {

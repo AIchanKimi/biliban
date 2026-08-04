@@ -48,6 +48,27 @@ test.describe('自定义规则（目标元素编辑）', () => {
     await page.close();
   });
 
+  test('字段化匹配：/^广告UP$/ 命中作者名字段，不误伤标题含该串的卡片', async () => {
+    const extensionId = await getExtensionId(context);
+    const toolsPage = await openToolsPage(context, extensionId);
+    // 旧形状（v1 keywordArray）播种：迁移路径会自动补入内置规则（v5 直通形状需自带 rules）
+    await seedConfig(toolsPage, {
+      functionEnable: true,
+      keywordArray: ['/^广告UP$/'],
+    });
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
+    // 作者字段全等「广告UP」→ 屏蔽
+    await expect
+      .poll(() => page.locator('[data-test="card-by-user"]').evaluate(el => el.classList.contains('block_obj_none')))
+      .toBe(true);
+    // 标题含「广告UP推荐合集」但作者字段不全等 → 不误伤（字段化前拼接匹配会误伤）
+    await page.waitForSelector('[data-test="card-name-in-title"]');
+    await page.waitForTimeout(600);
+    await expect(page.locator('[data-test="card-name-in-title"]')).not.toHaveClass(new RegExp(NONE));
+    await page.close();
+  });
+
   test('match 规则启用开关保存后立即生效，无需刷新', async () => {
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);

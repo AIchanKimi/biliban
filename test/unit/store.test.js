@@ -99,6 +99,17 @@ describe('normalize（v5 形状规范化）', () => {
     expect(result.durations).toEqual([{ op: 'lt', seconds: 60, scopes: ['global'] }]);
   });
 
+  test('词条 value trim 归一（v6.2，trim 后为空则剔除）', () => {
+    const result = normalize({
+      version: 5,
+      words: [
+        { value: '  词  ', scopes: ['global'] },
+        { value: '   ', scopes: ['global'] },
+      ],
+    });
+    expect(result.words).toEqual([{ value: '词', scopes: ['global'] }]);
+  });
+
   test('词条形状强制：value 非字符串/空串剔除，scopes 归一化（废弃分类回落 global）', () => {
     const result = normalize({
       version: 5,
