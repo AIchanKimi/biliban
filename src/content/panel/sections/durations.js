@@ -15,11 +15,11 @@ import {
 import { createChip } from '../chips.js';
 import { buttonClicked, createSpanBtn } from '../input-row.js';
 
-/** 词条 → chip 显示文案 */
+/** 词条 → chip 显示文案（<60s 显示秒；整分钟显示分钟；其余显示秒） */
 export function durationLabel(entry) {
-  const minutes = entry.seconds / 60;
-  const minuteText = Number.isInteger(minutes) ? String(minutes) : minutes.toFixed(1);
-  return (entry.op === 'lt' ? '短于 ' : '长于 ') + minuteText + ' 分钟';
+  const s = entry.seconds;
+  const text = s < 60 || s % 60 !== 0 ? `${s} 秒` : `${s / 60} 分钟`;
+  return (entry.op === 'lt' ? '短于 ' : '长于 ') + text;
 }
 
 function separatorLi(label, title) {
@@ -105,10 +105,10 @@ export function createDurationsGroup(params) {
   minutesInput.type = 'number';
   minutesInput.id = minutesId;
   minutesInput.className = NUMBER_INPUT_CLASS;
-  minutesInput.min = '0.5';
-  minutesInput.step = '0.5';
-  minutesInput.placeholder = '分钟';
-  minutesInput.title = '阈值（分钟）';
+  minutesInput.min = '1';
+  minutesInput.step = '1';
+  minutesInput.placeholder = '秒';
+  minutesInput.title = '阈值（秒），如 15 表示 15 秒';
 
   const tempCheckbox = document.createElement('input');
   tempCheckbox.type = 'checkbox';
@@ -138,11 +138,11 @@ export function createDurationsGroup(params) {
   }
 
   const addEntry = () => {
-    const minutes = Number.parseFloat(minutesInput.value);
-    if (!Number.isFinite(minutes) || minutes <= 0) {
+    const seconds = Math.round(Number.parseFloat(minutesInput.value));
+    if (!Number.isFinite(seconds) || seconds <= 0) {
       return false;
     }
-    const candidate = { op: opSelect.value, seconds: Math.round(minutes * 60), scopes: [scope] };
+    const candidate = { op: opSelect.value, seconds, scopes: [scope] };
     const { persistent, temp } = extractDurationsFromEl(listEl);
     const dup = [...persistent, ...temp].some(e => e.op === candidate.op && e.seconds === candidate.seconds);
     if (dup) {
@@ -165,11 +165,10 @@ export function createDurationsGroup(params) {
     }
   });
   const deleteBtn = createSpanBtn('删除', '删除与输入相同时长的词条', () => {
-    const minutes = Number.parseFloat(minutesInput.value);
-    if (!Number.isFinite(minutes) || minutes <= 0) {
+    const seconds = Math.round(Number.parseFloat(minutesInput.value));
+    if (!Number.isFinite(seconds) || seconds <= 0) {
       return;
     }
-    const seconds = Math.round(minutes * 60);
     let removed = false;
     for (const chip of [...listEl.getElementsByClassName(CHIP_CLASS)]) {
       if (Number(chip.dataset.seconds) === seconds) {

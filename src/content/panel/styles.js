@@ -75,7 +75,11 @@ export const LIB_STYLE = `
     margin-top: 5px;
   }
   .block_obj_input_div {
-    margin-top: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
   }
   .block_obj_input {
     background-color: #C0C0C0;
@@ -83,23 +87,19 @@ export const LIB_STYLE = `
     color: #000;
     font-size: 13px;
     min-height: 1.5em;
-    margin-left: 5px;
-    margin-right: 5px;
     padding-left: 4px;
   }
   .block_obj_keyword_input {
     width: 190px;
   }
   .block_obj_number_input {
-    width: 60px;
+    width: 70px;
   }
   .block_obj_select {
     background-color: #C0C0C0;
     border: 1px solid #C0C0C0;
     color: #000;
     font-size: 13px;
-    margin-left: 5px;
-    vertical-align: bottom;
   }
   .block_obj_input_btn {
     background-color: #3da9cc;
@@ -108,16 +108,13 @@ export const LIB_STYLE = `
     box-shadow: 0 0 4px #73C9E5;
     color: #FFF;
     cursor: pointer;
-    display: inline-block;
     min-height: 1em;
-    margin-left: 5px;
+    padding: 1px 6px;
     text-align: center;
-    vertical-align: bottom;
     white-space: nowrap;
-    width: 30px;
   }
   .block_obj_list_div {
-    margin-top: 5px;
+    margin-top: 6px;
   }
   .block_obj_list_textarea_div {
     border: 1px dotted #00A1D6;
@@ -179,8 +176,10 @@ export const LIB_STYLE = `
     display: none;
   }
   .block_obj_tab_bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
     margin-top: 5px;
-    white-space: nowrap;
   }
   .block_obj_tab {
     background-color: #3D3D3D;
@@ -188,8 +187,6 @@ export const LIB_STYLE = `
     border: 1px solid #555;
     color: #D3D3D3;
     cursor: pointer;
-    display: inline-block;
-    margin-right: 3px;
     padding: 2px 8px;
     user-select: none;
   }
@@ -222,23 +219,26 @@ export const LIB_STYLE = `
     border-radius: 5px;
   }
   .block_obj_rule_row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
     border: 1px dotted #555;
     border-radius: 3px;
     margin-top: 4px;
-    padding: 4px;
+    padding: 4px 6px;
+    position: relative;
   }
   .block_obj_rule_row .block_obj_input {
     width: 150px;
   }
   .block_obj_rule_more {
-    margin-top: 4px;
-  }
-  .block_obj_rule_row_builtin {
-    border: 1px solid #3D3D3D;
-    border-radius: 3px;
-    margin-top: 4px;
-    padding: 4px;
-    opacity: 0.9;
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
   }
   .block_obj_rule_selector {
     color: #8be9fd;

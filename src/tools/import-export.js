@@ -1,7 +1,9 @@
-// 内部迁移工具页逻辑（v5）：导入接受 v1（含油猴原形状，自动迁移）或 v2 JSON；导出 v2。
+// 内部迁移工具页逻辑（v5）：导入接受任意旧版本形状（自动迁移）或当前版本 JSON；
+// 导出全量设置（屏蔽词/时长词条/全部规则——内置规则未固化时以代码默认补全）。
 import { isCurrentVersion } from '../content/config/migrate.js';
 import { normalize } from '../content/config/store.js';
 import { CONFIG_KEY, INFO_RECORD_KEY } from '../content/config/defaults.js';
+import { BUILTIN_RULES } from '../content/rules/builtin-rules.js';
 
 const dataEl = document.getElementById('data');
 const statusEl = document.getElementById('status');
@@ -43,6 +45,16 @@ document.getElementById('import').addEventListener('click', async () => {
 
 document.getElementById('export').addEventListener('click', async () => {
   const stored = await chrome.storage.local.get([CONFIG_KEY, INFO_RECORD_KEY]);
-  dataEl.value = JSON.stringify(normalize(stored[CONFIG_KEY] ?? null), null, 2);
-  setStatus('已导出当前设置（infoRecord 缓存 ' + (stored[INFO_RECORD_KEY]?.length ?? 0) + ' 条未包含）。');
+  const config = normalize(stored[CONFIG_KEY] ?? null);
+  // 全量导出：内置规则从未被编辑（存储缺省）时以代码默认补全，保证导出自包含
+  const exported = {
+    ...config,
+    builtinRules: config.builtinRules ?? BUILTIN_RULES.map(rule => ({ ...rule })),
+  };
+  dataEl.value = JSON.stringify(exported, null, 2);
+  setStatus(
+    '已导出全部设置（含 ' + exported.builtinRules.length + ' 条内置规则与 ' +
+      exported.rules.length + ' 条自定义规则；infoRecord 缓存 ' +
+      (stored[INFO_RECORD_KEY]?.length ?? 0) + ' 条未包含）。'
+  );
 });

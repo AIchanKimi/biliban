@@ -103,20 +103,20 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
-  test('时长词条：面板添加「短于 0.5 分钟」→ 落盘 durations 词条', async () => {
+  test('时长词条：面板添加「短于 15 秒」→ 落盘 durations 词条', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
     await page.selectOption('#bilibiliConfig_durationOp_global', 'lt');
-    await page.fill('#bilibiliConfig_durationMinutes_global', '0.5');
+    await page.fill('#bilibiliConfig_durationMinutes_global', '15');
     await page
       .locator("xpath=//input[@id='bilibiliConfig_durationMinutes_global']/following::span[text()='添加'][1]")
       .click();
-    await expect(page.locator('#bilibiliConfig_durations_global')).toContainText('短于 0.5 分钟');
+    await expect(page.locator('#bilibiliConfig_durations_global')).toContainText('短于 15 秒');
     await page.locator("xpath=//span[@title='仅保存设置']").click();
     await expect
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).durations)
-      .toEqual([{ op: 'lt', seconds: 30, scopes: ['global'] }]);
+      .toEqual([{ op: 'lt', seconds: 15, scopes: ['global'] }]);
     // 还原：清掉该词条避免影响后续用例
     await seedConfig(toolsPage, { version: 4, enable: true, words: [], durations: [], rules: [] });
     await page.close();
@@ -197,11 +197,14 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     const row = page.locator('#bilibiliConfig_rules_global .block_obj_rule_row').last();
     await row.locator('input[type="text"]').first().fill('.my-new-card');
     await row.locator('select').selectOption('hide');
+    // 「启用」勾选可经 label 点击关闭（回归：label[for] 绑定修复）
+    await row.locator('label').first().click();
+    await expect(row.locator('input[type="checkbox"]')).not.toBeChecked();
     await page.locator("xpath=//span[@title='仅保存设置']").click();
     await expect
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).rules)
       .toEqual([
-        expect.objectContaining({ selector: '.my-new-card', scopes: ['global'], mode: 'hide', enabled: true }),
+        expect.objectContaining({ selector: '.my-new-card', scopes: ['global'], mode: 'hide', enabled: false }),
       ]);
     await page.close();
   });

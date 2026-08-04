@@ -77,9 +77,12 @@ export function createRuleRow(rule = {}, options = {}) {
 
   const enabledBox = document.createElement('input');
   enabledBox.type = 'checkbox';
+  // 裁剪隐藏的 checkbox 必须经 label[for] 点击，id 用 ruleId 保证唯一
+  enabledBox.id = 'bilibiliConfig_ruleEnable_' + row.dataset.ruleId;
   enabledBox.className = CHECKBOX_INPUT_CLASS;
   enabledBox.checked = rule.enabled !== false;
   const enabledLabel = document.createElement('label');
+  enabledLabel.htmlFor = enabledBox.id;
   enabledLabel.className = CHECKBOX_LABEL_CLASS;
   enabledLabel.title = '启用该规则';
   enabledLabel.textContent = '启用';
