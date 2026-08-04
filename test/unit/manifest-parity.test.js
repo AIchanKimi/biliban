@@ -38,16 +38,12 @@ describe('manifest.json 与模块树的一致性（WAR 清单漂移防护）', (
     expect(ghosts).toEqual([]);
   });
 
-  test('content_scripts matches 覆盖原脚本 @include 的 8 个子站', () => {
+  test('content_scripts matches 收窄为 v5 的 4 个子站（live/h/manga/message 已移除）', () => {
     expect(manifest.content_scripts[0].matches).toEqual([
       '*://www.bilibili.com/*',
       '*://search.bilibili.com/*',
-      '*://live.bilibili.com/*',
       '*://space.bilibili.com/*',
       '*://t.bilibili.com/*',
-      '*://h.bilibili.com/*',
-      '*://manga.bilibili.com/*',
-      '*://message.bilibili.com/*',
     ]);
   });
 

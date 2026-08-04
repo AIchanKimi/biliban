@@ -1,6 +1,7 @@
-// 内部迁移工具页逻辑：与 Tampermonkey 存储形状互转（bilibili_config 单对象）。
-const CONFIG_KEY = 'bilibili_config';
-const INFO_RECORD_KEY = 'infoRecord';
+// 内部迁移工具页逻辑（v5）：导入接受 v1（含油猴原形状，自动迁移）或 v2 JSON；导出 v2。
+import { isV2 } from '../content/config/migrate.js';
+import { normalize } from '../content/config/store.js';
+import { CONFIG_KEY, INFO_RECORD_KEY } from '../content/config/defaults.js';
 
 const dataEl = document.getElementById('data');
 const statusEl = document.getElementById('status');
@@ -30,12 +31,18 @@ document.getElementById('import').addEventListener('click', async () => {
     setStatus('内容不是有效的配置对象。');
     return;
   }
-  await chrome.storage.local.set({ [CONFIG_KEY]: parsed });
-  setStatus('导入成功。刷新已打开的 bilibili 页面即可生效。');
+  const migrated = !isV2(parsed);
+  const config = normalize(parsed);
+  await chrome.storage.local.set({ [CONFIG_KEY]: config });
+  setStatus(
+    migrated
+      ? '导入成功：已从 v1/油猴形状自动迁移（评论/白名单等废弃内容被丢弃）。刷新已打开的 bilibili 页面即可生效。'
+      : '导入成功。刷新已打开的 bilibili 页面即可生效。'
+  );
 });
 
 document.getElementById('export').addEventListener('click', async () => {
   const stored = await chrome.storage.local.get([CONFIG_KEY, INFO_RECORD_KEY]);
-  dataEl.value = JSON.stringify(stored[CONFIG_KEY] ?? {}, null, 2);
+  dataEl.value = JSON.stringify(normalize(stored[CONFIG_KEY] ?? null), null, 2);
   setStatus('已导出当前设置（infoRecord 缓存 ' + (stored[INFO_RECORD_KEY]?.length ?? 0) + ' 条未包含）。');
 });
