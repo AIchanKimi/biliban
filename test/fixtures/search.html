@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Fixture: 搜索页</title>
+  </head>
+  <body>
+    <div data-test="search-card-ad">
+      <div class="bili-video-card">
+        <div class="bili-video-card__info--tit">广告教程</div>
+        <div class="bili-video-card__info--author">正常UP</div>
+        <span>10:00</span>
+      </div>
+    </div>
+    <div data-test="search-card-scoped">
+      <div class="bili-video-card">
+        <div class="bili-video-card__info--tit">含搜索专属词的教程</div>
+        <div class="bili-video-card__info--author">正常UP</div>
+        <span>08:00</span>
+      </div>
+    </div>
+    <div data-test="search-card-clean">
+      <div class="bili-video-card">
+        <div class="bili-video-card__info--tit">完全正常的视频</div>
+        <div class="bili-video-card__info--author">正常UP</div>
+        <span>15:00</span>
+      </div>
+    </div>
+    <div class="video-item" data-test="search-item-user">
+      <a class="up-name">讨厌的UP</a>
+      <a class="title">某视频标题</a>
+    </div>
+    <div class="video-item" data-test="search-item-clean">
+      <a class="up-name">正常UP二</a>
+      <a class="title">另一视频标题</a>
+    </div>
+  </body>
+</html>

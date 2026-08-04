@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <title>Fixture: 视频卡片</title>
+    <title>Fixture: 视频卡片（www）</title>
   </head>
   <body>
     <div class="video-card-common" data-test="card-by-user">
@@ -16,6 +16,20 @@
     <div class="video-card-common" data-test="card-clean">
       <a class="up">正常UP</a>
       <a class="title">正常标题三</a>
+    </div>
+    <div class="video-card-common" data-test="card-scoped">
+      <a class="up">正常UP</a>
+      <a class="title">含搜索专属词</a>
+    </div>
+    <div class="video-card-common" data-test="card-short">
+      <a class="up">正常UP</a>
+      <a class="title">正常短视频</a>
+      <span>0:30</span>
+    </div>
+    <div class="video-card-common" data-test="card-long">
+      <a class="up">正常UP</a>
+      <a class="title">正常长视频</a>
+      <span>12:05</span>
     </div>
     <div class="groom-module" data-test="card-c1">
       <p class="author">up主：讨厌的UP</p>
@@ -31,9 +45,9 @@
         <p class="t">异步查询卡片二</p>
       </div>
     </div>
-    <div class="live-card" data-test="card-live">
-      <p class="name">直播某人</p>
-      <p class="desc">直播描述广告</p>
+    <div class="custom-junk" data-test="custom-junk">垃圾横幅</div>
+    <div class="custom-match-card" data-test="custom-match">
+      <span class="custom-title">匹配词标题</span>
     </div>
   </body>
 </html>

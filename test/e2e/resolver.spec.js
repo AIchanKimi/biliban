@@ -9,7 +9,14 @@ test.describe('BV → 用户名异步查询（c:2 规则）', () => {
     await setupApiRoute(context, { ownerName: '异步UP' });
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);
-    await seedConfig(toolsPage, { functionEnable: true, usernameEnable: true, usernameArray: ['异步UP'] });
+    await seedConfig(toolsPage, {
+      version: 2,
+      enable: true,
+      duration: { enable: false, minSeconds: 300 },
+      usernames: [{ value: '异步UP', scopes: ['global'] }],
+      keywords: [],
+      rules: [],
+    });
 
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
@@ -34,7 +41,14 @@ test.describe('BV → 用户名异步查询（c:2 规则）', () => {
     await setupApiRoute(context, { status: 412, onRequest: () => requestCount++ });
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);
-    await seedConfig(toolsPage, { functionEnable: true, usernameEnable: true, usernameArray: ['异步UP'] });
+    await seedConfig(toolsPage, {
+      version: 2,
+      enable: true,
+      duration: { enable: false, minSeconds: 300 },
+      usernames: [{ value: '异步UP', scopes: ['global'] }],
+      keywords: [],
+      rules: [],
+    });
 
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
