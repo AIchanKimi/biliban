@@ -5,11 +5,14 @@ import {
   INPUT_DIV_CLASS,
   SELECT_CLASS,
   NUMBER_INPUT_CLASS,
+  CHECKBOX_INPUT_CLASS,
+  CHECKBOX_LABEL_CLASS,
   SEPARATOR_TEXT_CLASS,
   LIST_DIV_CLASS,
   LIST_TEXTAREA_DIV_CLASS,
   CHIP_CLASS,
 } from '../../constants.js';
+import { TEMP_DEFAULT_HOURS } from '../../config/defaults.js';
 import { createChip } from '../chips.js';
 import { buttonClicked, createSpanBtn } from '../input-row.js';
 import { formatDuration } from '../../engine/duration.js';
@@ -117,21 +120,13 @@ export function createDurationsGroup(params) {
   const tempCheckbox = document.createElement('input');
   tempCheckbox.type = 'checkbox';
   tempCheckbox.id = tempId;
-  tempCheckbox.title = '临时词条：独立存储、跨标签页同步，到期后自动清除';
+  tempCheckbox.className = CHECKBOX_INPUT_CLASS;
+  tempCheckbox.title = '临时词条：固定 1 小时有效期，到期后自动清除';
   const tempLabel = document.createElement('label');
   tempLabel.htmlFor = tempId;
+  tempLabel.className = CHECKBOX_LABEL_CLASS;
   tempLabel.textContent = '临时';
   tempLabel.title = tempCheckbox.title;
-  const tempHoursSelect = document.createElement('select');
-  tempHoursSelect.className = SELECT_CLASS;
-  tempHoursSelect.title = '临时词条有效期';
-  for (const [hours, label] of [[1, '1小时'], [6, '6小时'], [24, '24小时'], [168, '7天']]) {
-    const option = document.createElement('option');
-    option.value = String(hours);
-    option.textContent = label;
-    option.selected = hours === 24;
-    tempHoursSelect.appendChild(option);
-  }
 
   const listEl = document.createElement('div');
   listEl.id = listId;
@@ -170,7 +165,7 @@ export function createDurationsGroup(params) {
     }
     const dataset = { op: candidate.op, seconds: String(candidate.seconds) };
     if (tempCheckbox.checked) {
-      dataset.expiresAt = String(Date.now() + Number(tempHoursSelect.value) * 3600_000);
+      dataset.expiresAt = String(Date.now() + TEMP_DEFAULT_HOURS * 3600_000);
     }
     listEl.insertAdjacentElement('afterbegin', createChip({
       value: `${candidate.op}:${candidate.seconds}`,
@@ -217,7 +212,6 @@ export function createDurationsGroup(params) {
   inputDiv.appendChild(previewSpan);
   inputDiv.appendChild(tempCheckbox);
   inputDiv.appendChild(tempLabel);
-  inputDiv.appendChild(tempHoursSelect);
   inputDiv.appendChild(addBtn);
   inputLi.appendChild(inputDiv);
 

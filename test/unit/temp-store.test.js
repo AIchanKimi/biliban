@@ -62,15 +62,15 @@ describe('temp-store（过期制临时词条）', () => {
     mockChrome({});
   });
 
-  test('add 后未到期可读取，默认有效期 24 小时', async () => {
+  test('add 后未到期可读取，固定有效期 1 小时（v6.5）', async () => {
     await initTempStore();
     const before = Date.now();
     await addTempEntries([{ kind: 'word', value: '临时词', scopes: ['search'] }]);
     const entries = getTempEntries();
     expect(entries.length).toBe(1);
     expect(entries[0].value).toBe('临时词');
-    expect(entries[0].expiresAt).toBeGreaterThanOrEqual(before + 24 * HOUR - 1000);
-    expect(entries[0].expiresAt).toBeLessThanOrEqual(Date.now() + 24 * HOUR + 1000);
+    expect(entries[0].expiresAt).toBeGreaterThanOrEqual(before + HOUR - 1000);
+    expect(entries[0].expiresAt).toBeLessThanOrEqual(Date.now() + HOUR + 1000);
   });
 
   test('过期词条不返回，pruneExpired 清除并写回', async () => {

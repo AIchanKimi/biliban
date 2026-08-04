@@ -6,7 +6,7 @@ export const CONFIG_KEY = 'bilibili_config';
 export const TEMP_KEY = 'bilibili_temp_entries';
 export const CONFIG_VERSION = 5;
 // 临时词条默认有效期：24 小时
-export const TEMP_DEFAULT_HOURS = 24;
+export const TEMP_DEFAULT_HOURS = 1; // v6.5：临时词条固定 1 小时（移除可选有效期）
 // 代码内置规则集版本：内置规则在首次载入时并入 rules 列表（与自定义规则同构）；
 // 版本升级时仅按 id 补入新增的内置规则，不覆盖用户已有规则
 export const BUILTIN_RULES_VERSION = 4;

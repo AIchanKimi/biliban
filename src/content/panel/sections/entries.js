@@ -5,11 +5,13 @@ import {
   FIELD_ID_PREFIX,
   INPUT_DIV_CLASS,
   INPUT_CLASS,
-  SELECT_CLASS,
+  CHECKBOX_INPUT_CLASS,
+  CHECKBOX_LABEL_CLASS,
   SEPARATOR_TEXT_CLASS,
   LIST_DIV_CLASS,
   LIST_TEXTAREA_DIV_CLASS,
 } from '../../constants.js';
+import { TEMP_DEFAULT_HOURS } from '../../config/defaults.js';
 import { REGEX_LITERAL_RE, parseRegexLiteral } from '../../config/serialize.js';
 import { stringToArray } from '../../util/string-to-array.js';
 import { seedEntries, extractEntriesFromEl, prependEntry, removeValues } from '../chips.js';
@@ -65,21 +67,13 @@ export function createEntriesGroup(params) {
   const tempCheckbox = document.createElement('input');
   tempCheckbox.type = 'checkbox';
   tempCheckbox.id = tempId;
-  tempCheckbox.title = '临时词条：独立存储、跨标签页同步，到期后自动清除';
+  tempCheckbox.className = CHECKBOX_INPUT_CLASS;
+  tempCheckbox.title = '临时词条：固定 1 小时有效期，到期后自动清除';
   const tempLabel = document.createElement('label');
   tempLabel.htmlFor = tempId;
+  tempLabel.className = CHECKBOX_LABEL_CLASS;
   tempLabel.textContent = '临时';
   tempLabel.title = tempCheckbox.title;
-  const tempHoursSelect = document.createElement('select');
-  tempHoursSelect.className = SELECT_CLASS;
-  tempHoursSelect.title = '临时词条有效期';
-  for (const [hours, label] of [[1, '1小时'], [6, '6小时'], [24, '24小时'], [168, '7天']]) {
-    const option = document.createElement('option');
-    option.value = String(hours);
-    option.textContent = label;
-    option.selected = hours === 24;
-    tempHoursSelect.appendChild(option);
-  }
 
   const listEl = document.createElement('div');
   listEl.id = listId;
@@ -93,7 +87,7 @@ export function createEntriesGroup(params) {
     }
     const temp = tempCheckbox.checked;
     const dataset = temp
-      ? { expiresAt: String(Date.now() + Number(tempHoursSelect.value) * 3600_000) }
+      ? { expiresAt: String(Date.now() + TEMP_DEFAULT_HOURS * 3600_000) }
       : undefined;
     // v6.2：输入值 trim（trim 后为空则丢弃）
     const values = stringToArray(textValue).map(value => value.trim()).filter(isValidNewEntry);
@@ -158,7 +152,6 @@ export function createEntriesGroup(params) {
   inputDiv.appendChild(input);
   inputDiv.appendChild(tempCheckbox);
   inputDiv.appendChild(tempLabel);
-  inputDiv.appendChild(tempHoursSelect);
   inputDiv.appendChild(addBtn);
   inputLi.appendChild(inputDiv);
 

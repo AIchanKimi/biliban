@@ -62,40 +62,20 @@ export const LIB_STYLE = `
     display: inline-block;
     margin-top: 2px;
   }
+  /* v6.5：统一原生 checkbox（accent-color 主色，勾形由浏览器绘制，不再用伪元素字符） */
   .block_obj_checkbox_input {
-    clip: rect(0, 0, 0, 0);
-    position: absolute;
+    accent-color: var(--bo-primary);
+    cursor: pointer;
+    height: 14px;
+    margin: 0;
+    vertical-align: -2px;
+    width: 14px;
   }
   .block_obj_checkbox_label {
     color: var(--bo-text-secondary);
     cursor: pointer;
     user-select: none;
     vertical-align: middle;
-  }
-  .block_obj_checkbox_input + label::before {
-    background-color: var(--bo-bg);
-    border: 1px solid var(--bo-border-strong);
-    border-radius: 4px;
-    color: #FFF;
-    content: "\\a0";
-    display: inline-block;
-    font-size: 11px;
-    height: 1em;
-    line-height: 1;
-    margin-right: 0.5em;
-    padding: 1px;
-    text-align: center;
-    vertical-align: 0.15em;
-    width: 1em;
-    cursor: pointer;
-  }
-  .block_obj_checkbox_input:checked + label::before {
-    background-color: var(--bo-primary);
-    border-color: var(--bo-primary);
-    content: "\\2713";
-  }
-  .block_obj_checkbox_input:focus-visible + label::before {
-    box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.12);
   }
   .block_obj_separator_text {
     color: var(--bo-text-secondary);

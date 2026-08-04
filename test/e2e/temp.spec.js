@@ -27,7 +27,7 @@ async function addTempKeyword(page, value) {
     .click();
 }
 
-test.describe('临时屏蔽（过期制，默认 24 小时）', () => {
+test.describe('临时屏蔽（过期制，固定 1 小时）', () => {
   let context, toolsPage;
 
   test.beforeAll(async () => {
@@ -56,13 +56,14 @@ test.describe('临时屏蔽（过期制，默认 24 小时）', () => {
     await expect
       .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
-    // 持久配置中无该词；独立键中带 expiresAt（约 24 小时后）
+    // 持久配置中无该词；独立键中带 expiresAt（v6.5 固定 1 小时后）
     const stored = await readStorageKey(toolsPage, 'bilibili_config');
     expect(stored.words).toEqual([]);
     const tempStored = await readStorageKey(toolsPage, TEMP_KEY);
     expect(tempStored.length).toBe(1);
     expect(tempStored[0].value).toBe('广告');
-    expect(tempStored[0].expiresAt).toBeGreaterThan(Date.now() + 23 * HOUR);
+    expect(tempStored[0].expiresAt).toBeGreaterThan(Date.now() + 0.9 * HOUR);
+    expect(tempStored[0].expiresAt).toBeLessThanOrEqual(Date.now() + HOUR + 5000);
     await page.close();
   });
 
