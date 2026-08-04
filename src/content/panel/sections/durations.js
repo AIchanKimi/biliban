@@ -14,6 +14,7 @@ import {
 } from '../../constants.js';
 import { createChip } from '../chips.js';
 import { buttonClicked, createSpanBtn } from '../input-row.js';
+import { formatDuration } from '../../engine/duration.js';
 
 /** 词条 → chip 显示文案（<60s 显示秒；整分钟显示分钟；其余显示秒） */
 export function durationLabel(entry) {
@@ -43,7 +44,12 @@ function chipToDuration(chip) {
   const scopes = typeof chip.dataset.scopes === 'string' && chip.dataset.scopes !== ''
     ? chip.dataset.scopes.split(',')
     : ['global'];
-  return { op, seconds, scopes, temp: chip.dataset.temp === '1' };
+  const entry = { op, seconds, scopes, temp: chip.dataset.temp === '1' };
+  const expiresAt = Number(chip.dataset.expiresAt);
+  if (Number.isFinite(expiresAt) && expiresAt > 0) {
+    entry.expiresAt = expiresAt;
+  }
+  return entry;
 }
 
 /**
@@ -60,6 +66,9 @@ export function extractDurationsFromEl(listEl) {
     }
     const scoped = { op: entry.op, seconds: entry.seconds, scopes: entry.scopes };
     if (entry.temp) {
+      if (entry.expiresAt) {
+        scoped.expiresAt = entry.expiresAt; // 续存原有到期时间
+      }
       temp.push(scoped);
     } else {
       persistent.push(scoped);
@@ -79,7 +88,8 @@ export function extractDurationsFromEl(listEl) {
 export function createDurationsGroup(params) {
   const { scope, entries, tempEntries } = params;
   const opId = `${FIELD_ID_PREFIX}durationOp_${scope}`;
-  const minutesId = `${FIELD_ID_PREFIX}durationMinutes_${scope}`;
+  const secondsId = `${FIELD_ID_PREFIX}durationSeconds_${scope}`;
+  const previewId = `${FIELD_ID_PREFIX}durationPreview_${scope}`;
   const tempId = `${FIELD_ID_PREFIX}durationTemp_${scope}`;
   const listId = `${FIELD_ID_PREFIX}durations_${scope}`;
 
@@ -101,35 +111,61 @@ export function createDurationsGroup(params) {
     opSelect.appendChild(option);
   }
 
-  const minutesInput = document.createElement('input');
-  minutesInput.type = 'number';
-  minutesInput.id = minutesId;
-  minutesInput.className = NUMBER_INPUT_CLASS;
-  minutesInput.min = '1';
-  minutesInput.step = '1';
-  minutesInput.placeholder = '秒';
-  minutesInput.title = '阈值（秒），如 15 表示 15 秒';
+  const secondsInput = document.createElement('input');
+  secondsInput.type = 'number';
+  secondsInput.id = secondsId;
+  secondsInput.className = NUMBER_INPUT_CLASS;
+  secondsInput.min = '1';
+  secondsInput.step = '1';
+  secondsInput.placeholder = '秒';
+  secondsInput.title = '阈值（秒），如 15 表示 15 秒';
+  // 右侧实时预览为 B 站时长格式（22:24 / 01:17:44）
+  const previewSpan = document.createElement('span');
+  previewSpan.id = previewId;
+  previewSpan.className = 'block_obj_duration_preview';
+  previewSpan.textContent = '—';
+  const refreshPreview = () => {
+    const seconds = Math.round(Number.parseFloat(secondsInput.value));
+    previewSpan.textContent = Number.isFinite(seconds) && seconds > 0 ? formatDuration(seconds) : '—';
+  };
+  secondsInput.addEventListener('input', refreshPreview);
 
   const tempCheckbox = document.createElement('input');
   tempCheckbox.type = 'checkbox';
   tempCheckbox.id = tempId;
-  tempCheckbox.title = '临时词条：仅本标签页生效，不落盘、不跨标签页、刷新即失';
+  tempCheckbox.title = '临时词条：独立存储、跨标签页同步，到期后自动清除';
   const tempLabel = document.createElement('label');
   tempLabel.htmlFor = tempId;
   tempLabel.textContent = '临时';
   tempLabel.title = tempCheckbox.title;
+  const tempHoursSelect = document.createElement('select');
+  tempHoursSelect.className = SELECT_CLASS;
+  tempHoursSelect.title = '临时词条有效期';
+  for (const [hours, label] of [[1, '1小时'], [6, '6小时'], [24, '24小时'], [168, '7天']]) {
+    const option = document.createElement('option');
+    option.value = String(hours);
+    option.textContent = label;
+    option.selected = hours === 24;
+    tempHoursSelect.appendChild(option);
+  }
 
   const listEl = document.createElement('div');
   listEl.id = listId;
   listEl.className = LIST_TEXTAREA_DIV_CLASS;
 
-  const seedOne = entry => listEl.insertAdjacentElement('afterbegin', createChip({
-    value: `${entry.op}:${entry.seconds}`,
-    label: durationLabel(entry),
-    scopes: entry.scopes,
-    temp: Boolean(entry.temp),
-    dataset: { op: entry.op, seconds: String(entry.seconds) },
-  }));
+  const seedOne = entry => {
+    const dataset = { op: entry.op, seconds: String(entry.seconds) };
+    if (entry.expiresAt) {
+      dataset.expiresAt = String(entry.expiresAt);
+    }
+    listEl.insertAdjacentElement('afterbegin', createChip({
+      value: `${entry.op}:${entry.seconds}`,
+      label: durationLabel(entry),
+      scopes: entry.scopes,
+      temp: Boolean(entry.temp),
+      dataset,
+    }));
+  };
   for (const entry of entries ?? []) {
     seedOne(entry);
   }
@@ -138,7 +174,7 @@ export function createDurationsGroup(params) {
   }
 
   const addEntry = () => {
-    const seconds = Math.round(Number.parseFloat(minutesInput.value));
+    const seconds = Math.round(Number.parseFloat(secondsInput.value));
     if (!Number.isFinite(seconds) || seconds <= 0) {
       return false;
     }
@@ -148,14 +184,19 @@ export function createDurationsGroup(params) {
     if (dup) {
       return false;
     }
+    const dataset = { op: candidate.op, seconds: String(candidate.seconds) };
+    if (tempCheckbox.checked) {
+      dataset.expiresAt = String(Date.now() + Number(tempHoursSelect.value) * 3600_000);
+    }
     listEl.insertAdjacentElement('afterbegin', createChip({
       value: `${candidate.op}:${candidate.seconds}`,
       label: durationLabel(candidate),
       scopes: candidate.scopes,
       temp: tempCheckbox.checked,
-      dataset: { op: candidate.op, seconds: String(candidate.seconds) },
+      dataset,
     }));
-    minutesInput.value = '';
+    secondsInput.value = '';
+    refreshPreview();
     return true;
   };
 
@@ -165,7 +206,7 @@ export function createDurationsGroup(params) {
     }
   });
   const deleteBtn = createSpanBtn('删除', '删除与输入相同时长的词条', () => {
-    const seconds = Math.round(Number.parseFloat(minutesInput.value));
+    const seconds = Math.round(Number.parseFloat(secondsInput.value));
     if (!Number.isFinite(seconds) || seconds <= 0) {
       return;
     }
@@ -177,7 +218,8 @@ export function createDurationsGroup(params) {
       }
     }
     if (removed) {
-      minutesInput.value = '';
+      secondsInput.value = '';
+      refreshPreview();
       buttonClicked(deleteBtn, '删除成功');
     }
   });
@@ -188,9 +230,11 @@ export function createDurationsGroup(params) {
 
   inputDiv.appendChild(inputSpan);
   inputDiv.appendChild(opSelect);
-  inputDiv.appendChild(minutesInput);
+  inputDiv.appendChild(secondsInput);
+  inputDiv.appendChild(previewSpan);
   inputDiv.appendChild(tempCheckbox);
   inputDiv.appendChild(tempLabel);
+  inputDiv.appendChild(tempHoursSelect);
   inputDiv.appendChild(addBtn);
   inputDiv.appendChild(deleteBtn);
   inputDiv.appendChild(clearBtn);

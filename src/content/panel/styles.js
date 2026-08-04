@@ -229,16 +229,41 @@ export const LIB_STYLE = `
     padding: 4px 6px;
     position: relative;
   }
-  .block_obj_rule_row .block_obj_input {
-    width: 150px;
+  .block_obj_rule_summary {
+    color: #8be9fd;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .block_obj_rule_more {
+  .block_obj_rule_edit {
     flex-basis: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .block_obj_rule_selector_input {
+    width: 260px;
+  }
+  .block_obj_rule_textsel_wrap {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    margin-top: 2px;
+  }
+  .block_obj_rule_textsel_row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .block_obj_rule_textsel {
+    width: 180px;
+  }
+  .block_obj_rule_duration_input {
+    width: 180px;
   }
   .block_obj_rule_selector {
     color: #8be9fd;
@@ -293,6 +318,13 @@ export const LIB_STYLE = `
   .block_obj_cancel_button {
     float: left;
     margin-left: 5px;
+  }
+  .block_obj_tools_button {
+    background-color: #00A1D6;
+    border-color: #00A1D6;
+    display: block;
+    margin: 8px auto 2px;
+    clear: both;
   }
   .block_obj_expand_box {
     bottom: 0px;

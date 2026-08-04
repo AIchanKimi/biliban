@@ -2,21 +2,21 @@ import { describe, test, expect } from 'bun:test';
 import { BUILTIN_RULES } from '../../src/content/rules/builtin-rules.js';
 import { SCOPE_VALUES } from '../../src/content/config/scopes.js';
 
-describe('builtin-rules 形状', () => {
-  test('共 23 条（38 − 10 直播 − 4 相薄 − 1 死规则）', () => {
-    expect(BUILTIN_RULES.length).toBe(23);
+describe('builtin-rules v5.5（textSelectors 模型）', () => {
+  test('精简后共 9 条', () => {
+    expect(BUILTIN_RULES.length).toBe(9);
   });
 
-  test('每条形状合法：id/selector/scopes/mode', () => {
+  test('每条形状合法：id/selector/scopes/mode/textSelectors 数组', () => {
     const ids = new Set();
     for (const rule of BUILTIN_RULES) {
       expect(typeof rule.id).toBe('string');
-      expect(rule.id.length).toBeGreaterThan(0);
       expect(ids.has(rule.id)).toBe(false);
       ids.add(rule.id);
       expect(typeof rule.selector).toBe('string');
-      expect(rule.selector.length).toBeGreaterThan(0);
       expect(rule.mode).toBe('match');
+      expect(Array.isArray(rule.textSelectors)).toBe(true);
+      expect(rule.textSelectors.length).toBeGreaterThan(0);
       expect(rule.scopes.length).toBeGreaterThan(0);
       for (const scope of rule.scopes) {
         expect(SCOPE_VALUES).toContain(scope);
@@ -25,111 +25,35 @@ describe('builtin-rules 形状', () => {
     }
   });
 
-  test('无直播/相薄/评论残留', () => {
+  test('UP 主/标题选择器旧字段已废弃', () => {
+    for (const rule of BUILTIN_RULES) {
+      expect(rule.titleSelector).toBeUndefined();
+      expect(rule.userSelector).toBeUndefined();
+      expect(rule.userReg).toBeUndefined();
+      expect(rule.resolve).toBeUndefined();
+    }
+  });
+
+  test('失效旧布局规则已裁剪', () => {
     const json = JSON.stringify(BUILTIN_RULES.map(r => r.selector));
-    for (const gone of ['live-card', 'card-live-module', 'live-rank-item', 'live-user-item', 'live-room-item', 'room-card-wrapper', 'ysly-room-ctnr', 'card-items', 'photo-item', 'canvas-card', 'rank-list li.item']) {
+    for (const gone of [
+      '.video-card-common', '.video-card-reco', '.groom-module', '.rank-wrap',
+      '.manga-card', '.manga-spread-module', '.van-slide', 'ul.vd-list',
+      '.storey-box', '.video-item', '.article-list', '.rank-video-card', '.article-card',
+    ]) {
       expect(json).not.toContain(gone);
     }
-    for (const rule of BUILTIN_RULES) {
-      expect(rule.comment).toBeUndefined();
-      expect(rule.type).toBeUndefined();
-    }
   });
 
-  test('resolve bv 仅一条（.storey-box .spread-module）', () => {
-    const resolvers = BUILTIN_RULES.filter(r => r.resolve === 'bv');
-    expect(resolvers.length).toBe(1);
-    expect(resolvers[0].selector).toBe('.storey-box .spread-module');
-    expect(resolvers[0].bvSelector).toBe('a');
-  });
-
-  test('userReg 仅 groom-module 保留 /^up主：/', () => {
-    const withReg = BUILTIN_RULES.filter(r => r.userReg);
-    expect(withReg.length).toBe(1);
-    expect(withReg[0].selector).toBe('.groom-module');
-    expect(withReg[0].userReg).toEqual(/^up主：/);
-  });
-});
-
-describe('scopes 映射表（按旧 indexOf 语义逐条钉死）', () => {
-  const scopesOf = selector => BUILTIN_RULES.find(r => r.selector === selector)?.scopes;
-
-  test('缺省 url 规则 → [home, video]', () => {
-    for (const selector of [
-      '.bpx-player-ending-related-item',
-      '.recommend-video-card',
-      '.video-page-card-small',
-      '.video-card-common',
-      '.video-card-reco',
-      '.van-slide div.item',
-      '.rank-wrap',
-      '.article-card',
-      '.manga-card',
-      '.manga-spread-module',
-      '.groom-module',
-      'ul.vd-list li',
-      '.video-page-card, .video-page-operator-card',
-      '.storey-box .spread-module',
-    ]) {
-      expect(scopesOf(selector)).toEqual(['home', 'video']);
-    }
-  });
-
-  test('.video-card（旧含裸 bilibili.com）→ [global]', () => {
-    expect(scopesOf('.video-card')).toEqual(['global']);
-  });
-
-  test('搜索页三条 → [search]', () => {
-    expect(scopesOf('.user-list')).toEqual(['search']);
-    expect(scopesOf('div:has(> .bili-video-card)')).toEqual(['search']);
-    expect(scopesOf('.video-item')).toEqual(['search']);
-  });
-
-  test('动态规则归 [global]（动态分类精简，全局词条覆盖）', () => {
-    expect(scopesOf('.bili-dyn-item')).toEqual(['global']);
-  });
-
-  test('空间规则归 [space]（v5.3 空间分类回归）', () => {
-    expect(scopesOf('.cube-list .small-item')).toEqual(['space']);
-  });
-
-  test('全部 scopes 只含 v5.3 的 5 个有效分类', () => {
-    for (const rule of BUILTIN_RULES) {
-      for (const scope of rule.scopes) {
-        expect(SCOPE_VALUES).toContain(scope);
-      }
-    }
-  });
-
-  test('.ebox（旧 url 仅 video|bangumi 路径）→ [video]', () => {
-    expect(scopesOf('.ebox')).toEqual(['video']);
-  });
-
-  test('www 特定路径 → [home]', () => {
-    expect(scopesOf('.article-list li')).toEqual(['home']);
-    expect(scopesOf('.rank-video-card, .video-card')).toEqual(['home']);
-  });
-});
-
-describe('选择器提取字段保留', () => {
-  const ruleOf = selector => BUILTIN_RULES.find(r => r.selector === selector);
-
-  test('标题/用户名选择器与 v1 一致（抽样）', () => {
-    expect(ruleOf('div:has(> .bili-video-card)').titleSelector).toBe('.bili-video-card__info--tit');
-    expect(ruleOf('div:has(> .bili-video-card)').userSelector).toBe('.bili-video-card__info--author');
-    expect(ruleOf('.bili-dyn-item').userSelector).toBe('.bili-dyn-item .dyn-orig-author__name');
-    expect(ruleOf('.ebox').titleSelector).toBe('.etitle');
-  });
-
-  test('method 1 规则保留（visibility 隐藏）', () => {
-    for (const selector of ['.video-card-common', '.article-card', '.manga-card', '.manga-spread-module']) {
-      expect(ruleOf(selector).method).toBe(1);
-    }
-    expect(ruleOf('.rank-wrap').method ?? 0).toBe(0);
-  });
-
-  test('数组选择器保留（多候选）', () => {
-    expect(ruleOf('.video-card-common').userSelector).toEqual(['a.up', 'a.ex-up']);
-    expect(ruleOf('.rank-wrap').titleSelector).toEqual(['p.f-title', 'p.title', 'div.txt a.link p']);
+  test('关键规则的作用域与选择器', () => {
+    const byId = id => BUILTIN_RULES.find(r => r.id === id);
+    expect(byId('builtin-bili-video-card').scopes).toEqual(['global']);
+    expect(byId('builtin-bili-video-card').textSelectors).toContain('.bili-video-card__info--tit');
+    expect(byId('builtin-bili-video-card').durationSelector).toBe('.bili-video-card__stats__duration');
+    expect(byId('builtin-dyn-item').scopes).toEqual(['global']);
+    expect(byId('builtin-space-cube').scopes).toEqual(['space']);
+    expect(byId('builtin-search-user-list').scopes).toEqual(['search']);
+    expect(byId('builtin-ending-related').scopes).toEqual(['video']);
+    expect(byId('builtin-recommend-video-card').scopes).toEqual(['home', 'video']);
   });
 });

@@ -1,13 +1,12 @@
-// www.bilibili.com 特殊逻辑。逐字移植 target.js 1181–1252。
-// 轮播图三联隐藏（method 3 inline visibility）、排行榜、热门、播放器推荐、片尾推荐。
-import { getBvNumber, extractDataBvid } from '../dom/bv.js';
+// www.bilibili.com 特殊逻辑（v5.5 纯文字匹配）：轮播三联（method 3）+ 排行榜。
+// BV→用户名反查已移除：仅有链接、无文字信息的推荐位不再处理。
 
 /**
- * @param {{ hideHandler: Function, resolveUsername: Function }} deps
+ * @param {{ hideHandler: (itemNode, username, textValue, method?) => boolean }} deps
  * @returns {{ run: () => void }}
  */
 export function createWwwPage(deps) {
-  const { hideHandler, resolveUsername } = deps;
+  const { hideHandler } = deps;
 
   function run() {
     try {
@@ -21,7 +20,7 @@ export function createWwwPage(deps) {
             [carouselModulePanelTitle[panelIndex], carouselModulePanelPic[panelIndex], carouselModulePanelTrig[panelIndex]],
             null,
             carouselModulePanelTitle[panelIndex],
-            3
+            3 // 轮播三联用 inline visibility（不覆盖 B 站自管样式）
           );
         }
       }
@@ -40,41 +39,7 @@ export function createWwwPage(deps) {
       }
       if (rankItemEle.querySelector('.detail > a')) {
         hideHandler(rankItemEle, rankItemEle.querySelector('.detail > a'), textValue);
-      } else if (rankItemEle.querySelector('a')) {
-        const linkA = rankItemEle.querySelector('a');
-        const bvNum = getBvNumber(linkA.href);
-        resolveUsername(bvNum, rankItemEle, textValue);
       }
-    }
-    const recentHot = document.querySelectorAll('div#recent_hot li');
-    for (const recentHotItem of recentHot) {
-      const bvNum = getBvNumber(recentHotItem.querySelector('a').href);
-      resolveUsername(bvNum, recentHotItem, recentHotItem.title);
-    }
-    const bilibiliPlayerRecommendVideo = document.getElementsByClassName('bilibili-player-recommend-video');
-    for (const bilibiliPlayerRecommendVideoItem of bilibiliPlayerRecommendVideo) {
-      const bvNum = getBvNumber(bilibiliPlayerRecommendVideoItem.href);
-      resolveUsername(
-        bvNum,
-        bilibiliPlayerRecommendVideoItem,
-        bilibiliPlayerRecommendVideoItem.querySelector('.bilibili-player-recommend-title')
-      );
-    }
-    const bilibiliPlayerEndingPanelBoxRecommend = document.querySelectorAll('a.bilibili-player-ending-panel-box-recommend');
-    for (const bilibiliPlayerEndingPanelBoxRecommendItem of bilibiliPlayerEndingPanelBoxRecommend) {
-      let bvNum = extractDataBvid(bilibiliPlayerEndingPanelBoxRecommendItem.getAttribute('data-bvid'));
-      if (!bvNum) {
-        try {
-          bvNum = getBvNumber(bilibiliPlayerEndingPanelBoxRecommendItem.href);
-        } catch (e) {
-          bvNum = null;
-        }
-      }
-      resolveUsername(
-        bvNum,
-        bilibiliPlayerEndingPanelBoxRecommendItem,
-        bilibiliPlayerEndingPanelBoxRecommendItem.querySelector('.bilibili-player-ending-panel-box-recommend-cover-title')
-      );
     }
   }
 

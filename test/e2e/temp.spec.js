@@ -5,6 +5,8 @@ import { setupBilibiliRoutes } from './helpers/bilibili-routes.js';
 const WRAP = '#blockObj_bilibiliConfig_wrapDiv';
 const TRIGGER = '#blockObj_bilibiliConfig_expandSpan';
 const NONE = 'block_obj_none';
+const TEMP_KEY = 'bilibili_temp_entries';
+const HOUR = 3600_000;
 
 async function openPanel(page) {
   await page.waitForSelector(TRIGGER);
@@ -25,7 +27,7 @@ async function addTempKeyword(page, value) {
     .click();
 }
 
-test.describe('临时屏蔽（仅标签页内存）', () => {
+test.describe('临时屏蔽（过期制，默认 24 小时）', () => {
   let context, toolsPage;
 
   test.beforeAll(async () => {
@@ -43,42 +45,59 @@ test.describe('临时屏蔽（仅标签页内存）', () => {
   });
   test.afterAll(async () => context.close());
 
-  test('面板添加临时词 → 保存后立即屏蔽，且不落盘', async () => {
+  test('面板添加临时词 → 保存后立即屏蔽，落在独立存储键而非配置', async () => {
     const page = await context.newPage();
     await page.goto('https://search.bilibili.com/all?keyword=test');
     await openPanel(page);
     await addTempKeyword(page, '广告');
-    // chip 带临时徽标
     await expect(page.locator('#bilibiliConfig_words_search .block_obj_child_badge_temp')).toHaveText('临时');
     await page.locator("xpath=//span[@title='仅保存设置']").click();
 
     await expect
       .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
-    // 存储中无该词（临时不落盘）
+    // 持久配置中无该词；独立键中带 expiresAt（约 24 小时后）
     const stored = await readStorageKey(toolsPage, 'bilibili_config');
     expect(stored.words).toEqual([]);
+    const tempStored = await readStorageKey(toolsPage, TEMP_KEY);
+    expect(tempStored.length).toBe(1);
+    expect(tempStored[0].value).toBe('广告');
+    expect(tempStored[0].expiresAt).toBeGreaterThan(Date.now() + 23 * HOUR);
     await page.close();
   });
 
-  test('刷新页面后临时词失效', async () => {
+  test('刷新页面后临时词仍然生效（不再随刷新消失）', async () => {
     const page = await context.newPage();
     await page.goto('https://search.bilibili.com/all?keyword=test');
-    await openPanel(page);
-    await addTempKeyword(page, '广告');
-    await page.locator("xpath=//span[@title='仅保存设置']").click();
     await expect
       .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
-
     await page.reload();
-    await page.waitForSelector('[data-test="search-card-ad"]');
-    await page.waitForTimeout(800);
-    await expect(page.locator('[data-test="search-card-ad"]')).not.toHaveClass(new RegExp(NONE));
+    await expect
+      .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
+      .toBe(true);
     await page.close();
   });
 
-  test('「清空临时词」立即解除屏蔽（仅本分类）', async () => {
+  test('过期词条自动失效并被清除', async () => {
+    // 直接写入一条已过期的临时词（替换全部）
+    await toolsPage.evaluate(
+      async ([key, entry]) => chrome.storage.local.set({ [key]: [entry] }),
+      [TEMP_KEY, { kind: 'word', value: '广告', scopes: ['search'], expiresAt: Date.now() - 1000 }]
+    );
+    const page = await context.newPage();
+    await page.goto('https://search.bilibili.com/all?keyword=test');
+    await page.waitForSelector('[data-test="search-card-ad"]');
+    await page.waitForTimeout(800);
+    await expect(page.locator('[data-test="search-card-ad"]')).not.toHaveClass(new RegExp(NONE));
+    // 过期项被 prune 写回清除
+    await expect
+      .poll(async () => ((await readStorageKey(toolsPage, TEMP_KEY)) ?? []).length)
+      .toBe(0);
+    await page.close();
+  });
+
+  test('「清空临时词」立即解除屏蔽', async () => {
     const page = await context.newPage();
     await page.goto('https://search.bilibili.com/all?keyword=test');
     await openPanel(page);

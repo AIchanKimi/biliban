@@ -1,10 +1,9 @@
 import { describe, test, expect } from 'bun:test';
-import { CONFIG_KEY, INFO_RECORD_KEY, CONFIG_VERSION, DEFAULT_CONFIG, backupKeyFor } from '../../src/content/config/defaults.js';
+import { CONFIG_KEY, CONFIG_VERSION, DEFAULT_CONFIG, backupKeyFor } from '../../src/content/config/defaults.js';
 
 describe('v4 默认配置', () => {
   test('存储键与版本', () => {
     expect(CONFIG_KEY).toBe('bilibili_config');
-    expect(INFO_RECORD_KEY).toBe('infoRecord');
     expect(CONFIG_VERSION).toBe(4);
   });
 

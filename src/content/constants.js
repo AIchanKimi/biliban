@@ -49,6 +49,7 @@ export const CHIP_TRUNCATE_LIMIT = 9;
 export const BUTTON_CLASS = 'block_obj_button';
 export const SAVE_BUTTON_CLASS = 'block_obj_button block_obj_save_button';
 export const CANCEL_BUTTON_CLASS = 'block_obj_button block_obj_cancel_button';
+export const TOOLS_BUTTON_CLASS = 'block_obj_button block_obj_tools_button';
 export const BUTTON_CLICKED_CLASS = 'block_obj_button_clicked';
 
 // v5 面板新控件类名
@@ -66,11 +67,10 @@ export const RULE_BUILTIN_ROW_CLASS = 'block_obj_rule_row_builtin';
 export const RULE_BUILTIN_BADGE_CLASS = 'block_obj_rule_builtin_badge';
 export const RULE_STATS_CLASS = 'block_obj_rule_stats';
 export const RULE_STATS_HIT_CLASS = 'block_obj_rule_stats_hit';
-export const RULE_MORE_CLASS = 'block_obj_rule_more';
+export const RULE_EDIT_CLASS = 'block_obj_rule_edit';
 export const LI_WORDS_CLASS = 'block_obj_li_words';
 
 // 时序（毫秒）
-export const INTERVAL_TIME = 100; // resolver 请求节流基数
 export const SAVE_FLASH_MS = 1000; // 「已保存」文本闪烁
 export const BUTTON_FLASH_MS = 1000; // buttonClicked title 闪烁
 export const CANCEL_REBUILD_MS = 800; // 取消后重建延迟

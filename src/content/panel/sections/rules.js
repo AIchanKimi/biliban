@@ -1,15 +1,15 @@
 // 面板分节：规则组（归属某作用域标签页）。
-// 组成：内置规则行（可编辑/可删除，保存后写回 builtinRules）→ 自定义规则行 → 添加按钮。
-// 命中统计（rule-stats）让用户识别失效/无用规则：找到 N · 隐藏 M，有命中高亮。
-// 规则模式：按屏蔽词过滤（match，默认）/ 直接隐藏（hide）。
-// 选择器字段可扩展（v5.3）：标题 / UP主 / 时长，「更多」区按需追加新字段即可。
+// 组成：内置规则行 → 自定义规则行 → 添加按钮。
+// 行默认收起（概览 + 统计徽标 + 编辑/删除）；点「编辑」展开编辑区，避免整屏输入框。
+// 规则模型（v5.5）：卡片容器选择器 + 文字选择器数组（可多个）+ 时长选择器（可选）。
+// 模式：按屏蔽词过滤（match，默认，需至少一个文字选择器）/ 直接隐藏（hide）。
 import {
   INPUT_CLASS,
   SELECT_CLASS,
   RULE_ROW_CLASS,
+  RULE_EDIT_CLASS,
   RULE_BUILTIN_BADGE_CLASS,
   RULE_STATS_CLASS,
-  RULE_MORE_CLASS,
   CHECKBOX_INPUT_CLASS,
   CHECKBOX_LABEL_CLASS,
 } from '../../constants.js';
@@ -63,9 +63,26 @@ function createStatsBadge(ruleId) {
   return badge;
 }
 
+/** 文字选择器编辑行：输入框 + 移除按钮 */
+function createTextSelectorRow(container, value = '') {
+  const rowEl = document.createElement('div');
+  rowEl.className = 'block_obj_rule_textsel_row';
+  const input = textInput(value, '文字选择器，如 .title', '提取该元素文本交给屏蔽词匹配');
+  input.classList.add('block_obj_rule_textsel');
+  const removeBtn = createSpanBtn('✕', '移除该文字选择器', () => {
+    rowEl.remove();
+    if (container.querySelectorAll('.block_obj_rule_textsel_row').length === 0) {
+      container.appendChild(createTextSelectorRow(container));
+    }
+  });
+  rowEl.appendChild(input);
+  rowEl.appendChild(removeBtn);
+  return rowEl;
+}
+
 /**
- * 规则行（内置与自定义同一套编辑器；内置行带「内置」标记）。
- * @param {{ id?: string, selector?: string, mode?: string, titleSelector?: string, userSelector?: string, durationSelector?: string, enabled?: boolean }} rule
+ * 规则行（内置与自定义同一套编辑器；内置行带「内置」标记）。默认收起。
+ * @param {{ id?: string, selector?: string, mode?: string, textSelectors?: string[], durationSelector?: string, enabled?: boolean }} rule
  * @param {{ builtin?: boolean }} [options]
  * @returns {HTMLElement}
  */
@@ -75,6 +92,7 @@ export function createRuleRow(rule = {}, options = {}) {
   row.dataset.ruleId = rule.id || crypto.randomUUID();
   row.dataset.kind = options.builtin ? 'builtin' : 'custom';
 
+  // ---- 概览行（常显）----
   const enabledBox = document.createElement('input');
   enabledBox.type = 'checkbox';
   // 裁剪隐藏的 checkbox 必须经 label[for] 点击，id 用 ruleId 保证唯一
@@ -91,11 +109,36 @@ export function createRuleRow(rule = {}, options = {}) {
     const badge = document.createElement('span');
     badge.className = RULE_BUILTIN_BADGE_CLASS;
     badge.textContent = '内置';
-    badge.title = '扩展自带的规则；可直接改选择器或删除，保存后生效（删除所有内置规则即全部停用）';
+    badge.title = '扩展自带的规则；点「编辑」可改选择器或删除，保存后生效';
     row.appendChild(badge);
   }
 
+  const summarySpan = document.createElement('span');
+  summarySpan.className = 'block_obj_rule_summary';
+  summarySpan.title = String(rule.selector ?? '');
+
+  const editBtn = createSpanBtn('编辑', '展开编辑该规则', () => {
+    const willShow = editDiv.classList.toggle('block_obj_li_hide') === false;
+    editBtn.textContent = willShow ? '收起' : '编辑';
+    if (!willShow) {
+      syncSummary(); // 收起时把编辑结果同步回概览
+    }
+  });
+  const delBtn = createSpanBtn('删除', '删除该规则', () => row.remove());
+
+  row.appendChild(enabledBox);
+  row.appendChild(enabledLabel);
+  row.appendChild(summarySpan);
+  row.appendChild(editBtn);
+  row.appendChild(delBtn);
+  row.appendChild(createStatsBadge(row.dataset.ruleId));
+
+  // ---- 编辑区（默认收起）----
+  const editDiv = document.createElement('div');
+  editDiv.className = RULE_EDIT_CLASS + ' block_obj_li_hide';
+
   const selectorInput = textInput(rule.selector ?? '', '卡片容器选择器', '目标卡片容器选择器，如 .bili-video-card');
+  selectorInput.classList.add('block_obj_rule_selector_input');
 
   const modeSel = document.createElement('select');
   modeSel.className = SELECT_CLASS;
@@ -112,43 +155,41 @@ export function createRuleRow(rule = {}, options = {}) {
     modeSel.appendChild(option);
   }
 
-  const moreBtn = createSpanBtn('更多', '展开标题/UP主/时长选择器', () => {
-    const isHidden = moreDiv.classList.toggle('block_obj_li_hide');
-    moreBtn.textContent = isHidden ? '更多' : '收起';
+  // 文字选择器（可多个）
+  const textSelWrap = document.createElement('div');
+  textSelWrap.className = 'block_obj_rule_textsel_wrap';
+  const addTextBtn = createSpanBtn('＋文字', '新增一个文字选择器', () => {
+    textSelWrap.insertBefore(createTextSelectorRow(textSelWrap), addTextBtn);
   });
-  const delBtn = createSpanBtn('删除', '删除该规则', () => row.remove());
-
-  // 「更多」区：可扩展的选择器字段（标题 / UP主 / 时长）
-  const moreDiv = document.createElement('div');
-  moreDiv.className = RULE_MORE_CLASS;
-  const titleInput = textInput(rule.titleSelector ?? '', '标题选择器（可选）', '卡片内标题元素选择器；过滤模式至少填写标题或 UP主选择器之一');
-  const userInput = textInput(rule.userSelector ?? '', 'UP主选择器（可选）', '卡片内 UP主元素选择器');
-  const durationInput = textInput(rule.durationSelector ?? '', '时长选择器（可选）', '卡片内时长文本元素选择器，如 .duration；留空则自动探测');
-  moreDiv.appendChild(titleInput);
-  moreDiv.appendChild(userInput);
-  moreDiv.appendChild(durationInput);
-  const hasMore = Boolean(rule.titleSelector || rule.userSelector || rule.durationSelector);
-  if (rule.mode === 'hide' || !hasMore) {
-    moreDiv.classList.add('block_obj_li_hide');
-    moreBtn.textContent = '更多';
-  } else {
-    moreBtn.textContent = '收起';
+  const initialSelectors = (rule.textSelectors ?? []).filter(item => item);
+  for (const value of initialSelectors.length > 0 ? initialSelectors : ['']) {
+    textSelWrap.appendChild(createTextSelectorRow(textSelWrap, value));
   }
+  textSelWrap.appendChild(addTextBtn);
 
-  row.appendChild(enabledBox);
-  row.appendChild(enabledLabel);
-  row.appendChild(selectorInput);
-  row.appendChild(modeSel);
-  row.appendChild(moreBtn);
-  row.appendChild(delBtn);
-  row.appendChild(createStatsBadge(row.dataset.ruleId));
-  row.appendChild(moreDiv);
+  const durationInput = textInput(rule.durationSelector ?? '', '时长选择器（可选）', '卡片内时长文本元素选择器，如 .duration；留空则自动探测');
+  durationInput.classList.add('block_obj_rule_duration_input');
+
+  editDiv.appendChild(selectorInput);
+  editDiv.appendChild(modeSel);
+  editDiv.appendChild(textSelWrap);
+  editDiv.appendChild(durationInput);
+  row.appendChild(editDiv);
+
+  function syncSummary() {
+    const selectorText = selectorInput.value.trim() || '（未填写选择器）';
+    const modeText = modeLabel(modeSel.value);
+    summarySpan.textContent = selectorText;
+    summarySpan.title = selectorText + ' · ' + modeText;
+  }
+  syncSummary();
+
   return row;
 }
 
 /**
  * 某作用域下的规则组。
- * 内置规则来源：用户持久化的 builtinRules（若存在），否则代码默认 BUILTIN_RULES；
+ * 内置规则来源：用户持久化的 builtinRules（版本一致时），否则代码默认 BUILTIN_RULES；
  * 多作用域内置规则在每个所属标签页各渲染一行，收集时按当前标签页写单作用域。
  * @param {{ scope: string, rules: ReadonlyArray<Record<string, unknown>>, builtinRules: ReadonlyArray<Record<string, unknown>> | undefined }} params
  * @returns {{ container: HTMLElement, collect: () => { builtinRules: Array<Record<string, unknown>>, rules: Array<Record<string, unknown>>, invalidCount: number } }}
@@ -168,28 +209,27 @@ export function createRulesGroup({ scope, rules, builtinRules }) {
   const addBtn = createSpanBtn('添加规则', '新增一条本页面分类下的自定义规则', () => {
     container.appendChild(createRuleRow({}));
   });
+  addBtn.classList.add('block_obj_rule_add_btn');
   container.appendChild(addBtn);
 
   /** 行 → 规则对象；非法返回 null */
-  function collectRow(row) {
-    const selector = row.querySelector('input[type="text"]').value.trim();
-    const enabledBox = row.querySelector('input[type="checkbox"]');
-    const modeSel = row.querySelector('select');
-    const mode = modeSel?.value ?? 'match';
-    const [titleInput, userInput, durationInput] = row.querySelectorAll(`.${RULE_MORE_CLASS} input`);
-    const titleSelector = titleInput ? titleInput.value.trim() : '';
-    const userSelector = userInput ? userInput.value.trim() : '';
-    const durationSelector = durationInput ? durationInput.value.trim() : '';
-    if (!isCompilableSelector(selector) || (mode === 'match' && !titleSelector && !userSelector)) {
+  function collectRow(rowEl) {
+    const selector = rowEl.querySelector('.block_obj_rule_selector_input').value.trim();
+    const enabledBox = rowEl.querySelector('input[type="checkbox"]');
+    const mode = rowEl.querySelector('select')?.value ?? 'match';
+    const textSelectors = [...rowEl.querySelectorAll('.block_obj_rule_textsel')]
+      .map(input => input.value.trim())
+      .filter(value => value !== '');
+    const durationSelector = rowEl.querySelector('.block_obj_rule_duration_input').value.trim();
+    if (!isCompilableSelector(selector) || (mode === 'match' && textSelectors.length === 0)) {
       return null;
     }
     return {
-      id: row.dataset.ruleId,
+      id: rowEl.dataset.ruleId,
       selector,
       scopes: [scope],
       mode,
-      titleSelector,
-      userSelector,
+      textSelectors,
       durationSelector,
       enabled: enabledBox ? enabledBox.checked : true,
     };
@@ -199,13 +239,13 @@ export function createRulesGroup({ scope, rules, builtinRules }) {
     const builtinCollected = [];
     const customCollected = [];
     let invalidCount = 0;
-    for (const row of container.getElementsByClassName(RULE_ROW_CLASS)) {
-      const collected = collectRow(row);
+    for (const rowEl of container.getElementsByClassName(RULE_ROW_CLASS)) {
+      const collected = collectRow(rowEl);
       if (!collected) {
         invalidCount++;
         continue;
       }
-      if (row.dataset.kind === 'builtin') {
+      if (rowEl.dataset.kind === 'builtin') {
         builtinCollected.push(collected);
       } else {
         customCollected.push(collected);

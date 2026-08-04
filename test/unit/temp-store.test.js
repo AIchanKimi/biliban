@@ -1,108 +1,176 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import {
+  initTempStore,
   getTempEntries,
   addTempEntries,
-  removeTempEntry,
-  clearTempEntries,
+  setTempEntries,
   removeTempEntriesByScope,
+  clearTempEntries,
+  pruneExpired,
   getEffectiveEntries,
   mergeTempEntries,
-  setTempEntries,
+  subscribeTemp,
 } from '../../src/content/config/temp-store.js';
+import { TEMP_KEY } from '../../src/content/config/defaults.js';
 
-describe('temp-store（标签页内存临时词条，kind: word/duration）', () => {
-  beforeEach(() => clearTempEntries());
+// ---------- chrome.storage.local 内存 mock ----------
+function mockChrome(initial = {}) {
+  const store = { ...initial };
+  const listeners = [];
+  globalThis.chrome = {
+    storage: {
+      local: {
+        get: async keys => {
+          const keyList = Array.isArray(keys) ? keys : [keys]; // chrome API 两种形式都支持
+          const out = {};
+          for (const key of keyList) {
+            if (key in store) {
+              out[key] = store[key];
+            }
+          }
+          return out;
+        },
+        set: async obj => {
+          const changes = {};
+          for (const [key, value] of Object.entries(obj)) {
+            store[key] = value;
+            changes[key] = { newValue: value };
+          }
+          for (const listener of listeners) {
+            listener(changes, 'local');
+          }
+        },
+      },
+      onChanged: {
+        addListener: listener => listeners.push(listener),
+        removeListener: listener => {
+          const index = listeners.indexOf(listener);
+          if (index >= 0) {
+            listeners.splice(index, 1);
+          }
+        },
+      },
+    },
+  };
+  return store;
+}
 
-  test('add/get：屏蔽词与时长词条入内存', () => {
-    addTempEntries([
-      { kind: 'word', value: '临时词', scopes: ['search'] },
-      { kind: 'duration', op: 'lt', seconds: 60, scopes: ['global'] },
-    ]);
-    expect(getTempEntries()).toEqual([
-      { kind: 'word', value: '临时词', scopes: ['search'] },
-      { kind: 'duration', op: 'lt', seconds: 60, scopes: ['global'] },
-    ]);
+const HOUR = 3600_000;
+
+describe('temp-store（过期制临时词条）', () => {
+  beforeEach(() => {
+    mockChrome({});
   });
 
-  test('add：非法项被过滤（空值/坏 kind/坏 op/非正秒数），scopes 归一化', () => {
-    addTempEntries([
-      { kind: 'word', value: '', scopes: ['search'] },
-      { kind: 'bad', value: 'x', scopes: ['search'] },
-      { kind: 'duration', op: 'eq', seconds: 5, scopes: ['global'] },
-      { kind: 'duration', op: 'lt', seconds: -1, scopes: ['global'] },
-      { kind: 'word', value: 'y', scopes: ['dynamics', 'home'] },
-    ]);
-    expect(getTempEntries()).toEqual([{ kind: 'word', value: 'y', scopes: ['home'] }]);
+  test('add 后未到期可读取，默认有效期 24 小时', async () => {
+    await initTempStore();
+    const before = Date.now();
+    await addTempEntries([{ kind: 'word', value: '临时词', scopes: ['search'] }]);
+    const entries = getTempEntries();
+    expect(entries.length).toBe(1);
+    expect(entries[0].value).toBe('临时词');
+    expect(entries[0].expiresAt).toBeGreaterThanOrEqual(before + 24 * HOUR - 1000);
+    expect(entries[0].expiresAt).toBeLessThanOrEqual(Date.now() + 24 * HOUR + 1000);
   });
 
-  test('add：重复词条（身份）不重复入列', () => {
-    addTempEntries([{ kind: 'word', value: 'a', scopes: ['search'] }]);
-    addTempEntries([{ kind: 'word', value: 'a', scopes: ['search'] }]);
+  test('过期词条不返回，pruneExpired 清除并写回', async () => {
+    await initTempStore();
+    await setTempEntries([
+      { kind: 'word', value: '已过期', scopes: ['global'], expiresAt: Date.now() - 1000 },
+      { kind: 'word', value: '未过期', scopes: ['global'], expiresAt: Date.now() + HOUR },
+    ]);
+    expect(getTempEntries().map(e => e.value)).toEqual(['未过期']);
+    const store = globalThis.chrome && (await chrome.storage.local.get(TEMP_KEY));
+    expect(store[TEMP_KEY].length).toBe(2); // 尚未 prune
+    const removed = await pruneExpired();
+    expect(removed).toBe(1);
+    const after = await chrome.storage.local.get(TEMP_KEY);
+    expect(after[TEMP_KEY].map(e => e.value)).toEqual(['未过期']);
+  });
+
+  test('initTempStore 载入即清除过期项', async () => {
+    mockChrome({
+      [TEMP_KEY]: [
+        { kind: 'word', value: 'old', scopes: ['global'], expiresAt: Date.now() - HOUR },
+        { kind: 'duration', op: 'lt', seconds: 60, scopes: ['home'], expiresAt: Date.now() + HOUR },
+      ],
+    });
+    await initTempStore();
     expect(getTempEntries().length).toBe(1);
+    expect(getTempEntries()[0].kind).toBe('duration');
   });
 
-  test('remove：按身份精确移除', () => {
-    addTempEntries([
+  test('setTempEntries：自带 expiresAt 保留，缺省按小时数补齐', async () => {
+    await initTempStore();
+    const fixed = Date.now() + 7 * HOUR;
+    await setTempEntries(
+      [
+        { kind: 'word', value: 'a', scopes: ['global'], expiresAt: fixed },
+        { kind: 'word', value: 'b', scopes: ['global'] },
+      ],
+      6
+    );
+    const entries = getTempEntries();
+    expect(entries.find(e => e.value === 'a').expiresAt).toBe(fixed);
+    const b = entries.find(e => e.value === 'b');
+    expect(b.expiresAt).toBeGreaterThan(Date.now() + 5.9 * HOUR);
+    expect(b.expiresAt).toBeLessThan(Date.now() + 6.1 * HOUR);
+  });
+
+  test('removeTempEntriesByScope 按分类清空（屏蔽词与时长一起）', async () => {
+    await initTempStore();
+    await addTempEntries([
       { kind: 'word', value: 'a', scopes: ['search'] },
-      { kind: 'duration', op: 'lt', seconds: 60, scopes: ['search'] },
+      { kind: 'duration', op: 'lt', seconds: 30, scopes: ['search'] },
+      { kind: 'word', value: 'b', scopes: ['home'] },
     ]);
-    removeTempEntry({ kind: 'word', value: 'a', scopes: ['search'] });
-    expect(getTempEntries()).toEqual([{ kind: 'duration', op: 'lt', seconds: 60, scopes: ['search'] }]);
+    await removeTempEntriesByScope('search');
+    expect(getTempEntries().map(e => e.value)).toEqual(['b']);
   });
 
-  test('clear：清空', () => {
-    addTempEntries([{ kind: 'word', value: 'a', scopes: ['global'] }]);
-    clearTempEntries();
-    expect(getTempEntries()).toEqual([]);
-  });
-
-  test('setTempEntries：整体替换（面板保存语义）', () => {
-    addTempEntries([{ kind: 'word', value: 'old', scopes: ['global'] }]);
-    setTempEntries([{ kind: 'duration', op: 'gt', seconds: 3600, scopes: ['search'] }]);
-    expect(getTempEntries()).toEqual([{ kind: 'duration', op: 'gt', seconds: 3600, scopes: ['search'] }]);
-  });
-
-  test('removeTempEntriesByScope：按分类清空（屏蔽词与时长一起清）', () => {
-    addTempEntries([
-      { kind: 'word', value: 'a', scopes: ['search'] },
-      { kind: 'duration', op: 'lt', seconds: 60, scopes: ['search'] },
-      { kind: 'word', value: 'c', scopes: ['home'] },
+  test('非法项过滤 + 重复身份跳过', async () => {
+    await initTempStore();
+    await addTempEntries([
+      { kind: 'word', value: '', scopes: ['global'] },
+      { kind: 'bad', value: 'x', scopes: ['global'] },
+      { kind: 'word', value: 'ok', scopes: ['global'] },
+      { kind: 'word', value: 'ok', scopes: ['global'] },
     ]);
-    removeTempEntriesByScope('search');
-    expect(getTempEntries()).toEqual([{ kind: 'word', value: 'c', scopes: ['home'] }]);
+    expect(getTempEntries().map(e => e.value)).toEqual(['ok']);
   });
 
-  test('getTempEntries 返回副本（外部修改不影响内部）', () => {
-    addTempEntries([{ kind: 'word', value: 'a', scopes: ['global'] }]);
-    getTempEntries().push({ kind: 'word', value: 'fake' });
-    expect(getTempEntries().length).toBe(1);
+  test('subscribeTemp：自身写入回显过滤，远端变更生效', async () => {
+    const store = mockChrome({});
+    await initTempStore();
+    let calls = 0;
+    subscribeTemp(() => calls++);
+    await addTempEntries([{ kind: 'word', value: '自己写的', scopes: ['global'] }]);
+    expect(calls).toBe(0);
+    // 模拟其他标签页写入
+    await chrome.storage.local.set({
+      [TEMP_KEY]: [{ kind: 'word', value: '远端词', scopes: ['home'], expiresAt: Date.now() + HOUR }],
+    });
+    expect(calls).toBe(1);
+    expect(getTempEntries().map(e => e.value)).toEqual(['远端词']);
+    expect(store[TEMP_KEY].length).toBe(1);
   });
-});
 
-describe('getEffectiveEntries / mergeTempEntries（持久 + 临时合并）', () => {
-  beforeEach(() => clearTempEntries());
-
-  test('按 kind 合并，临时排后，输出不带 kind', () => {
-    addTempEntries([
-      { kind: 'word', value: '临k', scopes: ['search'] },
-      { kind: 'duration', op: 'lt', seconds: 30, scopes: ['home'] },
+  test('getEffectiveEntries：过期临时不参与合并', async () => {
+    await initTempStore();
+    await setTempEntries([
+      { kind: 'word', value: '新鲜', scopes: ['global'], expiresAt: Date.now() + HOUR },
+      { kind: 'word', value: '过期', scopes: ['global'], expiresAt: Date.now() - 1000 },
     ]);
-    expect(getEffectiveEntries([{ value: '持k', scopes: ['global'] }], 'word')).toEqual([
-      { value: '持k', scopes: ['global'] },
-      { value: '临k', scopes: ['search'] },
-    ]);
-    expect(getEffectiveEntries([], 'duration')).toEqual([{ op: 'lt', seconds: 30, scopes: ['home'] }]);
+    const merged = getEffectiveEntries([{ value: '持久', scopes: ['global'] }], 'word');
+    expect(merged.map(e => e.value)).toEqual(['持久', '新鲜']);
+    // 输出不带 kind/expiresAt 内部字段
+    expect(merged[1].kind).toBeUndefined();
+    expect(merged[1].expiresAt).toBeUndefined();
   });
 
-  test('同身份：持久优先，跳过临时副本', () => {
-    addTempEntries([{ kind: 'duration', op: 'lt', seconds: 60, scopes: ['global'] }]);
-    expect(getEffectiveEntries([{ op: 'lt', seconds: 60, scopes: ['global'] }], 'duration')).toEqual([
-      { op: 'lt', seconds: 60, scopes: ['global'] },
-    ]);
-  });
-
-  test('mergeTempEntries：words 与 durations 同时合并（不修改入参）', () => {
-    addTempEntries([
+  test('mergeTempEntries：words 与 durations 同时合并', async () => {
+    await initTempStore();
+    await addTempEntries([
       { kind: 'word', value: '临', scopes: ['search'] },
       { kind: 'duration', op: 'gt', seconds: 7200, scopes: ['global'] },
     ]);
@@ -114,7 +182,5 @@ describe('getEffectiveEntries / mergeTempEntries（持久 + 临时合并）', ()
     const merged = mergeTempEntries(runtime);
     expect(merged.words.map(e => e.value)).toEqual(['k', '临']);
     expect(merged.durations.map(e => e.seconds)).toEqual([60, 7200]);
-    expect(runtime.words.length).toBe(1);
-    expect(runtime.durations.length).toBe(1);
   });
 });

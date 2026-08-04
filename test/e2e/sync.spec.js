@@ -32,10 +32,10 @@ test.describe('多标签页同步（storage.onChanged）', () => {
     // 远端写入 → 两个内容脚本同时收到 onChanged
     await seedConfig(toolsPage, baseConfig([{ value: '广告', scopes: ['global'] }]));
     await expect
-      .poll(() => pageA.locator('[data-test="card-by-keyword"]').evaluate(el => el.classList.contains('block_obj_hidden')))
+      .poll(() => pageA.locator('[data-test="card-by-keyword"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
     await expect
-      .poll(() => pageB.locator('[data-test="card-by-keyword"]').evaluate(el => el.classList.contains('block_obj_hidden')))
+      .poll(() => pageB.locator('[data-test="card-by-keyword"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
 
     await context.close();

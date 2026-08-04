@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { launchContext, getExtensionId, openToolsPage, seedConfig } from './helpers/extension.js';
 import { setupBilibiliRoutes } from './helpers/bilibili-routes.js';
 
-const HIDDEN = 'block_obj_hidden'; // .video-card-common 规则 method 1
+const NONE = 'block_obj_none'; // v5.5 内置规则 method 0
 
 const baseConfig = durations => ({
   version: 4,
@@ -28,11 +28,11 @@ test.describe('时长按蔽（词条化）', () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await expect
-      .poll(() => page.locator('[data-test="card-short"]').evaluate(el => el.classList.contains('block_obj_hidden')))
+      .poll(() => page.locator('[data-test="card-short"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
     await page.waitForSelector('[data-test="card-long"]');
     await page.waitForTimeout(500);
-    await expect(page.locator('[data-test="card-long"]')).not.toHaveClass(new RegExp(HIDDEN));
+    await expect(page.locator('[data-test="card-long"]')).not.toHaveClass(new RegExp(NONE));
     await page.close();
   });
 
@@ -42,7 +42,7 @@ test.describe('时长按蔽（词条化）', () => {
     await page.goto('https://www.bilibili.com/');
     await page.waitForSelector('[data-test="card-short"]');
     await page.waitForTimeout(800);
-    await expect(page.locator('[data-test="card-short"]')).not.toHaveClass(new RegExp(HIDDEN));
+    await expect(page.locator('[data-test="card-short"]')).not.toHaveClass(new RegExp(NONE));
     await page.close();
   });
 
@@ -51,11 +51,11 @@ test.describe('时长按蔽（词条化）', () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await expect
-      .poll(() => page.locator('[data-test="card-long"]').evaluate(el => el.classList.contains('block_obj_hidden')))
+      .poll(() => page.locator('[data-test="card-long"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
     await page.waitForSelector('[data-test="card-short"]');
     await page.waitForTimeout(400);
-    await expect(page.locator('[data-test="card-short"]')).not.toHaveClass(new RegExp(HIDDEN));
+    await expect(page.locator('[data-test="card-short"]')).not.toHaveClass(new RegExp(NONE));
     await page.close();
   });
 
@@ -65,8 +65,8 @@ test.describe('时长按蔽（词条化）', () => {
     await page.goto('https://www.bilibili.com/');
     await page.waitForSelector('[data-test="card-short"]');
     await page.waitForTimeout(800);
-    await expect(page.locator('[data-test="card-short"]')).not.toHaveClass(new RegExp(HIDDEN));
-    await expect(page.locator('[data-test="card-long"]')).not.toHaveClass(new RegExp(HIDDEN));
+    await expect(page.locator('[data-test="card-short"]')).not.toHaveClass(new RegExp(NONE));
+    await expect(page.locator('[data-test="card-long"]')).not.toHaveClass(new RegExp(NONE));
     await page.close();
   });
 });

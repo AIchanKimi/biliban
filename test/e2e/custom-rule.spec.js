@@ -23,7 +23,7 @@ test.describe('自定义规则（目标元素编辑）', () => {
       toolsPage,
       baseConfig([
         { id: 'r-hide', selector: '.custom-junk', scopes: ['home'], mode: 'hide', titleSelector: '', userSelector: '', enabled: true },
-        { id: 'r-match', selector: '.custom-match-card', scopes: ['home'], mode: 'match', titleSelector: '.custom-title', userSelector: '', enabled: true },
+        { id: 'r-match', selector: '.custom-match-card', scopes: ['home'], mode: 'match', textSelectors: ['.custom-title'], userSelector: '', enabled: true },
         { id: 'r-bad', selector: '[[[invalid', scopes: ['home'], mode: 'hide', titleSelector: '', userSelector: '', enabled: true },
       ])
     );
@@ -58,8 +58,8 @@ test.describe('自定义规则（目标元素编辑）', () => {
       words: [],
       durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
       rules: [
-        { id: 'r-dursel', selector: '.dur-card', scopes: ['home'], mode: 'match', titleSelector: '.t', userSelector: '', durationSelector: '.dur', enabled: true },
-        { id: 'r-nodursel', selector: '.dur-card-nosel', scopes: ['home'], mode: 'match', titleSelector: '.t', userSelector: '', durationSelector: '', enabled: true },
+        { id: 'r-dursel', selector: '.dur-card', scopes: ['home'], mode: 'match', textSelectors: ['.t'], durationSelector: '.dur', enabled: true },
+        { id: 'r-nodursel', selector: '.dur-card-nosel', scopes: ['home'], mode: 'match', textSelectors: ['.t'], durationSelector: '', enabled: true },
       ],
     });
     const page = await context.newPage();

@@ -3,7 +3,6 @@ import { launchContext, getExtensionId, openToolsPage, seedConfig } from './help
 import { setupBilibiliRoutes, setupApiRoute } from './helpers/bilibili-routes.js';
 
 const NONE = 'block_obj_none'; // method 0：display 类
-const HIDDEN = 'block_obj_hidden'; // method 1：visibility 类
 
 const V4_CONFIG = {
   version: 4,
@@ -37,11 +36,11 @@ test.describe('作用域与内置规则', () => {
   });
   test.afterAll(async () => context.close());
 
-  test('全局关键字在 www 屏蔽（method 1 → visibility 类）', async () => {
+  test('全局关键字在 www 屏蔽（新版卡片结构，method 0）', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await expect
-      .poll(() => page.locator('[data-test="card-by-keyword"]').evaluate(el => el.classList.contains('block_obj_hidden')))
+      .poll(() => page.locator('[data-test="card-by-keyword"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
     await expect(page.locator('[data-test="card-by-keyword"]')).toBeAttached();
     await page.close();
@@ -51,20 +50,11 @@ test.describe('作用域与内置规则', () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await expect
-      .poll(() => page.locator('[data-test="card-by-user"]').evaluate(el => el.classList.contains('block_obj_hidden')))
+      .poll(() => page.locator('[data-test="card-by-user"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
     await page.waitForSelector('[data-test="card-clean"]');
     await page.waitForTimeout(500);
-    await expect(page.locator('[data-test="card-clean"]')).not.toHaveClass(new RegExp(HIDDEN));
-    await page.close();
-  });
-
-  test('c:1 用户名去前缀（up主：讨厌的UP → 讨厌的UP）', async () => {
-    const page = await context.newPage();
-    await page.goto('https://www.bilibili.com/video/BV1fixture');
-    await expect
-      .poll(() => page.locator('[data-test="card-c1"]').evaluate(el => el.classList.contains('block_obj_none')))
-      .toBe(true);
+    await expect(page.locator('[data-test="card-clean"]')).not.toHaveClass(new RegExp(NONE));
     await page.close();
   });
 
@@ -86,20 +76,19 @@ test.describe('作用域与内置规则', () => {
     await page.goto('https://www.bilibili.com/video/BV1fixture');
     await page.waitForSelector('[data-test="card-scoped"]');
     await page.waitForTimeout(500);
-    await expect(page.locator('[data-test="card-scoped"]')).not.toHaveClass(new RegExp(HIDDEN));
     await expect(page.locator('[data-test="card-scoped"]')).not.toHaveClass(new RegExp(NONE));
     await page.close();
   });
 
-  test('搜索页 .video-item 按用户名屏蔽', async () => {
+  test('搜索页 UP 主卡（.user-list）按文字屏蔽', async () => {
     const page = await context.newPage();
     await page.goto('https://search.bilibili.com/all?keyword=test');
     await expect
-      .poll(() => page.locator('[data-test="search-item-user"]').evaluate(el => el.classList.contains('block_obj_none')))
+      .poll(() => page.locator('[data-test="search-user-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
-    await page.waitForSelector('[data-test="search-item-clean"]');
+    await page.waitForSelector('[data-test="search-user-clean"]');
     await page.waitForTimeout(300);
-    await expect(page.locator('[data-test="search-item-clean"]')).not.toHaveClass(new RegExp(NONE));
+    await expect(page.locator('[data-test="search-user-clean"]')).not.toHaveClass(new RegExp(NONE));
     await page.close();
   });
 

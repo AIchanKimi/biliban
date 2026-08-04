@@ -140,35 +140,54 @@ describe('normalize（v4 形状规范化）', () => {
     ]);
   });
 
-  test('规则规范化：selector 必填，mode 收敛，缺省补全，durationSelector 可选', () => {
+  test('规则规范化：selector 必填，mode 收敛，textSelectors 数组，durationSelector 可选', () => {
     const result = normalize({
       version: 4,
       rules: [
         { id: 'r1', selector: '.x', scopes: ['search'], mode: 'hide' },
-        { id: 'r2', selector: '', scopes: ['home'], mode: 'match', titleSelector: '.t' },
-        { id: 'r3', selector: '.y', scopes: ['bad'], mode: 'weird', titleSelector: '.t', durationSelector: '.dur', enabled: false },
+        { id: 'r2', selector: '', scopes: ['home'], mode: 'match', textSelectors: ['.t'] },
+        { id: 'r3', selector: '.y', scopes: ['bad'], mode: 'weird', textSelectors: ['.t', ' ', '.u'], durationSelector: '.dur', enabled: false },
         { selector: '.z' },
         'not-object',
       ],
     });
     expect(result.rules).toEqual([
-      { id: 'r1', selector: '.x', scopes: ['search'], mode: 'hide', titleSelector: '', userSelector: '', durationSelector: '', enabled: true },
-      { id: 'r3', selector: '.y', scopes: ['global'], mode: 'match', titleSelector: '.t', userSelector: '', durationSelector: '.dur', enabled: false },
+      { id: 'r1', selector: '.x', scopes: ['search'], mode: 'hide', textSelectors: [], durationSelector: '', enabled: true },
+      { id: 'r3', selector: '.y', scopes: ['global'], mode: 'match', textSelectors: ['.t', '.u'], durationSelector: '.dur', enabled: false },
     ]);
   });
 
-  test('builtinRules：数组时持久化通过，缺省时省略（引擎回落代码默认）', () => {
+  test('旧形状规则：titleSelector/userSelector 并入 textSelectors', () => {
+    const result = normalize({
+      version: 4,
+      rules: [{ id: 'old', selector: '.card', scopes: ['home'], mode: 'match', titleSelector: '.t', userSelector: '.u' }],
+    });
+    expect(result.rules[0].textSelectors).toEqual(['.t', '.u']);
+  });
+
+  test('builtinRules：版本一致才承认持久化；版本不一致整体回落代码默认', () => {
     const withBuiltins = normalize({
       version: 4,
-      builtinRules: [{ id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', titleSelector: '.t' }],
+      builtinVersion: 2,
+      builtinRules: [{ id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', textSelectors: ['.t'] }],
     });
     expect(withBuiltins.builtinRules).toEqual([
-      { id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', titleSelector: '.t', userSelector: '', durationSelector: '', enabled: true },
+      { id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', textSelectors: ['.t'], durationSelector: '', enabled: true },
     ]);
+    expect(withBuiltins.builtinVersion).toBe(2);
+
+    // 旧版本固化集 → 丢弃，引擎回落代码默认
+    const stale = normalize({
+      version: 4,
+      builtinVersion: 1,
+      builtinRules: [{ id: 'builtin-x', selector: '.x', scopes: ['home'], mode: 'match', textSelectors: ['.t'] }],
+    });
+    expect('builtinRules' in stale).toBe(false);
+
     const withoutBuiltins = normalize({ version: 4 });
     expect('builtinRules' in withoutBuiltins).toBe(false);
-    // 空数组合法（用户删除了全部内置规则）
-    expect(normalize({ version: 4, builtinRules: [] }).builtinRules).toEqual([]);
+    // 空数组合法（用户删除了全部内置规则），版本一致时保留
+    expect(normalize({ version: 4, builtinVersion: 2, builtinRules: [] }).builtinRules).toEqual([]);
   });
 
   test('不修改入参（不可变）', () => {
@@ -196,7 +215,7 @@ describe('toRuntimeConfig / toStorageObject', () => {
       enable: true,
       durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
       words: [{ value: '/a,b/gi', scopes: ['search'] }, { value: '广告', scopes: ['global'] }],
-      rules: [{ id: 'r1', selector: '.x', scopes: ['home'], mode: 'hide', titleSelector: '', userSelector: '', durationSelector: '', enabled: true }],
+      rules: [{ id: 'r1', selector: '.x', scopes: ['home'], mode: 'hide', textSelectors: ['.t'], durationSelector: '', enabled: true }],
     };
     expect(toStorageObject(toRuntimeConfig(raw))).toEqual(raw);
   });

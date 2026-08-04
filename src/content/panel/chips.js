@@ -46,7 +46,10 @@ export function createChip(entry) {
     const tempBadge = document.createElement('span');
     tempBadge.className = CHIP_TEMP_BADGE_CLASS;
     tempBadge.textContent = '临时';
-    tempBadge.title = '仅本标签页生效，刷新页面后失效';
+    const expiresAt = Number(dataset?.expiresAt);
+    tempBadge.title = Number.isFinite(expiresAt) && expiresAt > 0
+      ? '临时词条，' + new Date(expiresAt).toLocaleString() + ' 到期后自动清除'
+      : '临时词条，到期后自动清除';
     childSpan.appendChild(tempBadge);
   }
 
@@ -68,11 +71,16 @@ function chipToEntry(chip) {
   const scopes = typeof chip.dataset.scopes === 'string' && chip.dataset.scopes !== ''
     ? chip.dataset.scopes.split(',')
     : ['global'];
-  return {
+  const entry = {
     value: textEl.title || textEl.textContent,
     scopes,
     temp: chip.dataset.temp === '1',
   };
+  const expiresAt = Number(chip.dataset.expiresAt);
+  if (Number.isFinite(expiresAt) && expiresAt > 0) {
+    entry.expiresAt = expiresAt;
+  }
+  return entry;
 }
 
 /**
@@ -91,6 +99,9 @@ export function extractEntriesFromEl(listEl) {
     }
     const scoped = { value: entry.value, scopes: entry.scopes };
     if (entry.temp) {
+      if (entry.expiresAt) {
+        scoped.expiresAt = entry.expiresAt; // 续存原有到期时间
+      }
       temp.push(scoped);
     } else {
       persistent.push(scoped);
@@ -138,7 +149,8 @@ export function seedEntries(listEl, persistentEntries, tempEntries) {
   }
   for (const entry of tempEntries ?? []) {
     if (entry && entry.value) {
-      listEl.insertAdjacentElement('afterbegin', createChip({ ...entry, temp: true }));
+      const dataset = entry.expiresAt ? { expiresAt: String(entry.expiresAt) } : {};
+      listEl.insertAdjacentElement('afterbegin', createChip({ ...entry, temp: true, dataset }));
     }
   }
 }

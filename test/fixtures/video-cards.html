@@ -5,44 +5,43 @@
     <title>Fixture: 视频卡片（www）</title>
   </head>
   <body>
-    <div class="video-card-common" data-test="card-by-user">
-      <a class="up">广告UP</a>
-      <a class="title">正常标题一</a>
-    </div>
-    <div class="video-card-common" data-test="card-by-keyword">
-      <a class="up">正常UP</a>
-      <a class="title">广告标题二</a>
-    </div>
-    <div class="video-card-common" data-test="card-clean">
-      <a class="up">正常UP</a>
-      <a class="title">正常标题三</a>
-    </div>
-    <div class="video-card-common" data-test="card-scoped">
-      <a class="up">正常UP</a>
-      <a class="title">含搜索专属词</a>
-    </div>
-    <div class="video-card-common" data-test="card-short">
-      <a class="up">正常UP</a>
-      <a class="title">正常短视频</a>
-      <span>0:30</span>
-    </div>
-    <div class="video-card-common" data-test="card-long">
-      <a class="up">正常UP</a>
-      <a class="title">正常长视频</a>
-      <span>12:05</span>
-    </div>
-    <div class="groom-module" data-test="card-c1">
-      <p class="author">up主：讨厌的UP</p>
-      <p class="title">推荐模块</p>
-    </div>
-    <div class="storey-box">
-      <div class="spread-module" data-test="card-c2-first">
-        <a href="https://www.bilibili.com/video/BV1sp000001"></a>
-        <p class="t">异步查询卡片一</p>
+    <!-- v5.5 内置规则结构：div:has(> .bili-video-card)，文字选择器 tit/author，时长选择器 duration -->
+    <div data-test="card-by-user">
+      <div class="bili-video-card">
+        <div class="bili-video-card__info--tit">正常标题一</div>
+        <div class="bili-video-card__info--author">广告UP</div>
       </div>
-      <div class="spread-module" data-test="card-c2-second">
-        <a href="https://www.bilibili.com/video/BV1sp000002"></a>
-        <p class="t">异步查询卡片二</p>
+    </div>
+    <div data-test="card-by-keyword">
+      <div class="bili-video-card">
+        <div class="bili-video-card__info--tit">广告标题二</div>
+        <div class="bili-video-card__info--author">正常UP</div>
+      </div>
+    </div>
+    <div data-test="card-clean">
+      <div class="bili-video-card">
+        <div class="bili-video-card__info--tit">正常标题三</div>
+        <div class="bili-video-card__info--author">正常UP</div>
+      </div>
+    </div>
+    <div data-test="card-scoped">
+      <div class="bili-video-card">
+        <div class="bili-video-card__info--tit">含搜索专属词</div>
+        <div class="bili-video-card__info--author">正常UP</div>
+      </div>
+    </div>
+    <div data-test="card-short">
+      <div class="bili-video-card">
+        <div class="bili-video-card__info--tit">正常短视频</div>
+        <div class="bili-video-card__info--author">正常UP</div>
+        <span class="bili-video-card__stats__duration">0:30</span>
+      </div>
+    </div>
+    <div data-test="card-long">
+      <div class="bili-video-card">
+        <div class="bili-video-card__info--tit">正常长视频</div>
+        <div class="bili-video-card__info--author">正常UP</div>
+        <span class="bili-video-card__stats__duration">12:05</span>
       </div>
     </div>
     <div class="custom-junk" data-test="custom-junk">垃圾横幅</div>

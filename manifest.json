@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "哔哩哔哩 - 屏蔽指定内容",
-  "version": "5.4.0",
-  "description": "按屏蔽词（用户名/关键字/正则）屏蔽 bilibili 视频卡片，支持页面作用域、临时屏蔽、时长按蔽与自定义选择器规则；多标签页同步。",
+  "version": "5.5.0",
+  "description": "按屏蔽词（关键字/正则，纯文字匹配）屏蔽 bilibili 视频卡片，支持页面作用域、过期式临时屏蔽、时长按蔽与可编辑的选择器规则；多标签页同步。",
   "permissions": ["storage"],
   "host_permissions": ["*://*.bilibili.com/*", "https://api.bilibili.com/*"],
   "content_scripts": [
@@ -30,7 +30,6 @@
         "src/content/config/store.js",
         "src/content/config/temp-store.js",
         "src/content/dom/arrive.js",
-        "src/content/dom/bv.js",
         "src/content/dom/extract-ele.js",
         "src/content/dom/hide-operation.js",
         "src/content/engine/category.js",
@@ -53,9 +52,7 @@
         "src/content/panel/sections/entries.js",
         "src/content/panel/sections/rules.js",
         "src/content/panel/sections/scope-pane.js",
-        "src/content/resolver/username-resolver.js",
         "src/content/rules/builtin-rules.js",
-        "src/content/util/date.js",
         "src/content/util/list-order.js",
         "src/content/util/string-to-array.js"
       ],

@@ -1,5 +1,25 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { parseDuration, findDurationSeconds, decideDurationEntries, clearDurationCache } from '../../src/content/engine/duration.js';
+import { parseDuration, formatDuration, findDurationSeconds, decideDurationEntries, clearDurationCache } from '../../src/content/engine/duration.js';
+
+describe('formatDuration（B 站时长格式）', () => {
+  test('不足 1 小时：m:ss', () => {
+    expect(formatDuration(0)).toBe('0:00');
+    expect(formatDuration(45)).toBe('0:45');
+    expect(formatDuration(83)).toBe('1:23');
+    expect(formatDuration(1344)).toBe('22:24');
+  });
+
+  test('1 小时及以上：HH:mm:ss（小时两位补零）', () => {
+    expect(formatDuration(3600)).toBe('01:00:00');
+    expect(formatDuration(4664)).toBe('01:17:44');
+    expect(formatDuration(36000)).toBe('10:00:00');
+  });
+
+  test('四舍五入且不为负', () => {
+    expect(formatDuration(59.6)).toBe('1:00');
+    expect(formatDuration(-5)).toBe('0:00');
+  });
+});
 
 describe('parseDuration', () => {
   test('mm:ss', () => {

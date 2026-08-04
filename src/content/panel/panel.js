@@ -16,6 +16,7 @@ import {
   UL_NODE_CLASS,
   SAVE_BUTTON_CLASS,
   CANCEL_BUTTON_CLASS,
+  TOOLS_BUTTON_CLASS,
   SAVE_FLASH_MS,
   CANCEL_REBUILD_MS,
   SEPARATOR_LI_CLASS,
@@ -29,6 +30,7 @@ import { SCOPES } from '../config/scopes.js';
 import { getTempEntries, setTempEntries, removeTempEntriesByScope } from '../config/temp-store.js';
 import { getRuleStats } from '../engine/rule-stats.js';
 import { categoryFor } from '../engine/category.js';
+import { BUILTIN_RULES_VERSION } from '../config/defaults.js';
 import { RULE_STATS_CLASS, RULE_STATS_HIT_CLASS, TAB_CURRENT_CLASS } from '../constants.js';
 import { createGeneralSection } from './sections/general.js';
 import { createScopePane } from './sections/scope-pane.js';
@@ -149,6 +151,9 @@ export function createPanel(deps) {
       }, SAVE_FLASH_MS);
       save(onlySaveButton);
     });
+    const toolsButton = createFooterBtn(TOOLS_BUTTON_CLASS, '导入/导出', '打开导入导出页（全部设置备份与迁移）', () => {
+      window.open(chrome.runtime.getURL('src/tools/import-export.html'), '_blank');
+    });
     const cancelButton = createFooterBtn(CANCEL_BUTTON_CLASS, '取消', '关闭设置窗口（丢弃未保存编辑）', e => {
       toggle();
       if (cancelTimer) {
@@ -164,6 +169,7 @@ export function createPanel(deps) {
     ulNode.appendChild(saveButton);
     ulNode.appendChild(onlySaveButton);
     ulNode.appendChild(cancelButton);
+    ulNode.appendChild(toolsButton);
     document.body.appendChild(wrapDiv);
   }
 
@@ -216,7 +222,8 @@ export function createPanel(deps) {
       invalidCount += result.invalidCount;
     }
     return {
-      storage: { version: CONFIG_VERSION, enable: general.enable, words, durations, builtinRules, rules },
+      // builtinVersion 与内置集版本一致时 normalize 才承认持久化的 builtinRules
+      storage: { version: CONFIG_VERSION, enable: general.enable, words, durations, builtinRules, builtinVersion: BUILTIN_RULES_VERSION, rules },
       temp,
       invalidCount,
     };

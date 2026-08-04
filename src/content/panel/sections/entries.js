@@ -6,6 +6,7 @@ import {
   INPUT_DIV_CLASS,
   INPUT_SPAN_CLASS,
   INPUT_CLASS,
+  SELECT_CLASS,
   SEPARATOR_LI_CLASS,
   SEPARATOR_TEXT_CLASS,
   LIST_DIV_CLASS,
@@ -83,11 +84,21 @@ export function createEntriesGroup(params) {
   const tempCheckbox = document.createElement('input');
   tempCheckbox.type = 'checkbox';
   tempCheckbox.id = tempId;
-  tempCheckbox.title = '临时词条：仅本标签页生效，不落盘、不跨标签页、刷新即失';
+  tempCheckbox.title = '临时词条：独立存储、跨标签页同步，到期后自动清除';
   const tempLabel = document.createElement('label');
   tempLabel.htmlFor = tempId;
   tempLabel.textContent = '临时';
   tempLabel.title = tempCheckbox.title;
+  const tempHoursSelect = document.createElement('select');
+  tempHoursSelect.className = SELECT_CLASS;
+  tempHoursSelect.title = '临时词条有效期';
+  for (const [hours, label] of [[1, '1小时'], [6, '6小时'], [24, '24小时'], [168, '7天']]) {
+    const option = document.createElement('option');
+    option.value = String(hours);
+    option.textContent = label;
+    option.selected = hours === 24;
+    tempHoursSelect.appendChild(option);
+  }
 
   const listEl = document.createElement('div');
   listEl.id = listId;
@@ -100,13 +111,16 @@ export function createEntriesGroup(params) {
       return false;
     }
     const temp = tempCheckbox.checked;
+    const dataset = temp
+      ? { expiresAt: String(Date.now() + Number(tempHoursSelect.value) * 3600_000) }
+      : undefined;
     const values = stringToArray(textValue).filter(isValidNewEntry);
     if (values.length === 0) {
       return false;
     }
     let inserted = false;
     for (const value of values) {
-      if (prependEntry(listEl, { value, scopes: [scope], temp })) {
+      if (prependEntry(listEl, { value, scopes: [scope], temp, dataset })) {
         inserted = true;
       }
     }
@@ -162,6 +176,7 @@ export function createEntriesGroup(params) {
   inputDiv.appendChild(inputSpan);
   inputDiv.appendChild(tempCheckbox);
   inputDiv.appendChild(tempLabel);
+  inputDiv.appendChild(tempHoursSelect);
   inputDiv.appendChild(addBtn);
   inputDiv.appendChild(deleteBtn);
   inputDiv.appendChild(clearBtn);

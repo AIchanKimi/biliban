@@ -12,6 +12,23 @@ const DURATION_RE = /^\d{1,3}(:\d{2}){1,2}$/;
 let durationCache = new WeakMap();
 
 /**
+ * 秒数 → B 站时长格式：<1 小时为 m:ss（如 22:24），≥1 小时为 HH:mm:ss（如 01:17:44）。
+ * @param {number} totalSeconds
+ * @returns {string}
+ */
+export function formatDuration(totalSeconds) {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const pad = n => String(n).padStart(2, '0');
+  if (h > 0) {
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+  return `${m}:${pad(s)}`;
+}
+
+/**
  * @param {unknown} text
  * @returns {number | null} 秒数；非时长文本返回 null
  */

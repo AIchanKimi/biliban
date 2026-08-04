@@ -1,10 +1,9 @@
 // 配置存储层 v3：chrome.storage.local 读写 + 旧版本迁移（版本化备份+写回）+ 多标签页同步订阅。
 // 存储形状见 defaults.js；屏蔽词正则转换见 serialize.js；临时词条在 temp-store.js（不落盘）。
-import { CONFIG_KEY, INFO_RECORD_KEY, CONFIG_VERSION, backupKeyFor } from './defaults.js';
+import { CONFIG_KEY, CONFIG_VERSION, BUILTIN_RULES_VERSION, backupKeyFor } from './defaults.js';
 import { isCurrentVersion, migrateToLatest } from './migrate.js';
 import { toRuntimeWordEntries, toStorageWordEntries } from './serialize.js';
 import { normalizeScopes } from './scopes.js';
-import { isRecordFresh } from '../util/date.js';
 
 // 自身写入回显过滤：storage.onChanged 对本标签页的写入也会触发。
 // 用键序无关的规范 JSON 比对——存储往返不保证键顺序不变。
@@ -74,14 +73,22 @@ function sanitizeRule(rule) {
   if (!selector || !id) {
     return null;
   }
+  // v5.5 规则选择器模型：卡片选择器 + 文字选择器数组（可多个）+ 时长选择器（可选）。
+  // 旧形状（titleSelector/userSelector 单字段）自动并入 textSelectors。
+  let textSelectors = [];
+  if (Array.isArray(rule.textSelectors)) {
+    textSelectors = rule.textSelectors.filter(item => typeof item === 'string' && item.trim() !== '');
+  } else {
+    textSelectors = [rule.titleSelector, rule.userSelector].filter(
+      item => typeof item === 'string' && item.trim() !== ''
+    );
+  }
   return Object.freeze({
     id,
     selector,
     scopes: Object.freeze(normalizeScopes(rule.scopes)),
     mode: rule.mode === 'hide' ? 'hide' : 'match',
-    titleSelector: typeof rule.titleSelector === 'string' ? rule.titleSelector : '',
-    userSelector: typeof rule.userSelector === 'string' ? rule.userSelector : '',
-    // v5.3 扩展点：更多选择器字段按需追加（时长选择器为首个）
+    textSelectors: Object.freeze(textSelectors),
     durationSelector: typeof rule.durationSelector === 'string' ? rule.durationSelector : '',
     enabled: rule.enabled !== false,
   });
@@ -143,9 +150,11 @@ export function normalize(rawConfig) {
     durations: sanitizeDurations(base.durations),
     rules: sanitizeRuleList(base.rules),
   };
-  // 内置规则的持久化版本（面板编辑/删除后写回）；从未编辑过则缺省，引擎回落代码默认
-  if (Array.isArray(base.builtinRules)) {
+  // 内置规则的持久化版本（面板编辑/删除后写回）；从未编辑过则缺省，引擎回落代码默认。
+  // builtinVersion 与代码内置集版本不一致时整体丢弃 → 升级扩展后新内置集自动生效。
+  if (Array.isArray(base.builtinRules) && base.builtinVersion === BUILTIN_RULES_VERSION) {
     result.builtinRules = sanitizeRuleList(base.builtinRules);
+    result.builtinVersion = BUILTIN_RULES_VERSION;
   }
   return Object.freeze(result);
 }
@@ -177,21 +186,19 @@ export function toStorageObject(runtimeConfig) {
 
 /**
  * 读取原始存储（未规范化）。
- * @returns {Promise<{ rawConfig: Record<string, unknown> | null, infoRecord: Array<Record<string, unknown>> }>}
+ * @returns {Promise<Record<string, unknown> | null>}
  */
 export async function loadRaw() {
-  const stored = await chrome.storage.local.get([CONFIG_KEY, INFO_RECORD_KEY]);
-  const rawConfig = stored[CONFIG_KEY] ?? null;
-  const infoRecord = Array.isArray(stored[INFO_RECORD_KEY]) ? stored[INFO_RECORD_KEY] : [];
-  return { rawConfig, infoRecord };
+  const stored = await chrome.storage.local.get([CONFIG_KEY]);
+  return stored[CONFIG_KEY] ?? null;
 }
 
 /**
- * 读取并规范化配置；v1 形状先写备份键再写回迁移结果（幂等），空存储不落盘。
+ * 读取并规范化配置；旧形状先写备份键再写回迁移结果（幂等），空存储不落盘。
  * @returns {Promise<Readonly<Record<string, unknown>>>} 存储形状
  */
 export async function loadConfig() {
-  const { rawConfig } = await loadRaw();
+  const rawConfig = await loadRaw();
   if (rawConfig === null) {
     return normalize(null);
   }
@@ -213,24 +220,6 @@ export async function loadConfig() {
 export async function saveConfig(storageObject) {
   lastSavedJson = canonicalJson(storageObject);
   await chrome.storage.local.set({ [CONFIG_KEY]: storageObject });
-}
-
-/**
- * 读取 BV→用户名缓存，过滤掉超过 3 天的条目。
- * @returns {Promise<Array<{ bv: string, user: string, time: string }>>}
- */
-export async function loadInfoRecord() {
-  const { infoRecord } = await loadRaw();
-  const now = Date.now();
-  return infoRecord.filter(record => isRecordFresh(now, record));
-}
-
-/**
- * @param {Array<{ bv: string, user: string, time: string }>} records
- * @returns {Promise<void>}
- */
-export async function saveInfoRecord(records) {
-  await chrome.storage.local.set({ [INFO_RECORD_KEY]: records });
 }
 
 /**

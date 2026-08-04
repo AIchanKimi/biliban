@@ -103,14 +103,18 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
-  test('时长词条：面板添加「短于 15 秒」→ 落盘 durations 词条', async () => {
+  test('时长词条：秒输入 + 格式预览 + 落盘', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
     await page.selectOption('#bilibiliConfig_durationOp_global', 'lt');
-    await page.fill('#bilibiliConfig_durationMinutes_global', '15');
+    await page.fill('#bilibiliConfig_durationSeconds_global', '4664');
+    // 右侧实时预览为 B 站时长格式
+    await expect(page.locator('#bilibiliConfig_durationPreview_global')).toHaveText('01:17:44');
+    await page.fill('#bilibiliConfig_durationSeconds_global', '15');
+    await expect(page.locator('#bilibiliConfig_durationPreview_global')).toHaveText('0:15');
     await page
-      .locator("xpath=//input[@id='bilibiliConfig_durationMinutes_global']/following::span[text()='添加'][1]")
+      .locator("xpath=//input[@id='bilibiliConfig_durationSeconds_global']/following::span[text()='添加'][1]")
       .click();
     await expect(page.locator('#bilibiliConfig_durations_global')).toContainText('短于 15 秒');
     await page.locator("xpath=//span[@title='仅保存设置']").click();
@@ -126,15 +130,15 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
-    await page.locator('#bilibiliConfig_tab_home').click();
-    // 内置规则行：可编辑（选择器为输入框），带「内置」标记
-    const builtinBadges = page.locator('#bilibiliConfig_pane_home .block_obj_rule_builtin_badge');
+    // builtin-bili-video-card 作用域为 global，行在「全局」标签（默认激活）
+    // 内置规则行：默认收起（概览），带「内置」标记
+    const builtinBadges = page.locator('#bilibiliConfig_pane_global .block_obj_rule_builtin_badge');
     await expect(builtinBadges.first()).toBeVisible();
-    await expect(page.locator('#bilibiliConfig_pane_home')).toContainText('内置');
-    const commonRow = page.locator('#bilibiliConfig_pane_home .block_obj_rule_row[data-rule-id="builtin-video-card-common"]');
-    await expect(commonRow.locator('input[type="text"]').first()).toHaveValue('.video-card-common');
-    // fixture 有 6 张 .video-card-common 卡片：该规则统计徽标命中（引擎在面板打开前已跑过多轮）
-    const statsBadge = page.locator('#bilibiliConfig_pane_home .block_obj_rule_stats[data-rule-id="builtin-video-card-common"]');
+    await expect(page.locator('#bilibiliConfig_pane_global')).toContainText('内置');
+    const cardRow = page.locator('#bilibiliConfig_pane_global .block_obj_rule_row[data-rule-id="builtin-bili-video-card"]');
+    await expect(cardRow.locator('.block_obj_rule_summary')).toContainText('bili-video-card');
+    // fixture 有 6 张 .bili-video-card 卡片：该规则统计徽标命中（引擎在面板打开前已跑过多轮）
+    const statsBadge = page.locator('#bilibiliConfig_pane_global .block_obj_rule_stats[data-rule-id="builtin-bili-video-card"]');
     await expect(statsBadge).toHaveText(/找到 \d+ · 隐藏 \d+/);
     await expect(statsBadge).toHaveClass(/block_obj_rule_stats_hit/);
 
@@ -161,31 +165,32 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
-  test('内置规则可编辑：改选择器 + 删除，保存后写回 builtinRules', async () => {
+  test('内置规则可编辑：点「编辑」改选择器 + 删除，保存后写回 builtinRules', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
-    await page.locator('#bilibiliConfig_tab_home').click();
+    await page.locator('#bilibiliConfig_tab_video').click();
 
-    // 编辑 .groom-module 行的选择器
-    const groomRow = page.locator('#bilibiliConfig_pane_home .block_obj_rule_row[data-rule-id="builtin-groom-module"]');
-    await expect(groomRow.locator('.block_obj_rule_builtin_badge')).toHaveText('内置');
-    await groomRow.locator('input[type="text"]').first().fill('.groom-module-v2');
+    // 编辑视频页右侧推荐行：默认收起，先点「编辑」展开再改选择器
+    const pageCardRow = page.locator('#bilibiliConfig_pane_video .block_obj_rule_row[data-rule-id="builtin-video-page-card"]');
+    await expect(pageCardRow.locator('.block_obj_rule_builtin_badge')).toHaveText('内置');
+    await pageCardRow.getByText('编辑', { exact: true }).click();
+    await pageCardRow.locator('.block_obj_rule_selector_input').fill('.video-page-card-v2');
 
-    // 删除 .article-card 行
-    const articleRow = page.locator('#bilibiliConfig_pane_home .block_obj_rule_row[data-rule-id="builtin-article-card"]');
-    await articleRow.getByText('删除', { exact: true }).click();
+    // 删除片尾推荐行（概览行直接有删除按钮）
+    const endingRow = page.locator('#bilibiliConfig_pane_video .block_obj_rule_row[data-rule-id="builtin-ending-related"]');
+    await endingRow.getByText('删除', { exact: true }).click();
 
     await page.locator("xpath=//span[@title='仅保存设置']").click();
     await expect
       .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).builtinRules)
       .toEqual(expect.arrayContaining([
-        expect.objectContaining({ id: 'builtin-groom-module', selector: '.groom-module-v2', scopes: ['home'] }),
+        expect.objectContaining({ id: 'builtin-video-page-card', selector: '.video-page-card-v2', scopes: ['video'] }),
       ]));
     const builtinRules = (await readStorageKey(toolsPage, 'bilibili_config')).builtinRules;
-    expect(builtinRules.find(r => r.id === 'builtin-article-card' && r.scopes[0] === 'home')).toBeUndefined();
-    // home 页其余内置规则仍在（未误删）
-    expect(builtinRules.filter(r => r.scopes[0] === 'home').length).toBeGreaterThanOrEqual(15);
+    expect(builtinRules.find(r => r.id === 'builtin-ending-related' && r.scopes[0] === 'video')).toBeUndefined();
+    // video 页其余内置规则仍在（未误删）
+    expect(builtinRules.filter(r => r.scopes[0] === 'video').length).toBeGreaterThanOrEqual(3);
     await page.close();
   });
 
@@ -195,7 +200,8 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await openPanel(page);
     await page.locator('#bilibiliConfig_rules_global').getByText('添加规则', { exact: true }).click();
     const row = page.locator('#bilibiliConfig_rules_global .block_obj_rule_row').last();
-    await row.locator('input[type="text"]').first().fill('.my-new-card');
+    await row.getByText('编辑', { exact: true }).click();
+    await row.locator('.block_obj_rule_selector_input').fill('.my-new-card');
     await row.locator('select').selectOption('hide');
     // 「启用」勾选可经 label 点击关闭（回归：label[for] 绑定修复）
     await row.locator('label').first().click();
