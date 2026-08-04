@@ -245,6 +245,10 @@ export const LIB_STYLE = `
     gap: 6px;
     margin-top: 2px;
   }
+  /* display:flex 声明在 .block_obj_li_hide 之后，需显式提升隐藏态优先级 */
+  .block_obj_rule_edit.block_obj_li_hide {
+    display: none;
+  }
   .block_obj_rule_selector_input {
     width: 260px;
   }
@@ -319,12 +323,17 @@ export const LIB_STYLE = `
     float: left;
     margin-left: 5px;
   }
+  .block_obj_tools_row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    clear: both;
+    margin-top: 8px;
+  }
   .block_obj_tools_button {
     background-color: #00A1D6;
     border-color: #00A1D6;
-    display: block;
-    margin: 8px auto 2px;
-    clear: both;
+    margin-top: 0;
   }
   .block_obj_expand_box {
     bottom: 0px;

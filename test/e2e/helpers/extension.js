@@ -13,6 +13,7 @@ export async function launchContext() {
   return chromium.launchPersistentContext('', {
     headless: false,
     channel: 'msedge',
+    acceptDownloads: true,
     args: [
       ...(headed ? [] : ['--headless=new']),
       `--disable-extensions-except=${EXTENSION_PATH}`,

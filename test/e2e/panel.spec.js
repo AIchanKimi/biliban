@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { launchContext, getExtensionId, openToolsPage, seedConfig, readStorageKey } from './helpers/extension.js';
 import { setupBilibiliRoutes } from './helpers/bilibili-routes.js';
 
@@ -191,6 +194,43 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     expect(builtinRules.find(r => r.id === 'builtin-ending-related' && r.scopes[0] === 'video')).toBeUndefined();
     // video 页其余内置规则仍在（未误删）
     expect(builtinRules.filter(r => r.scopes[0] === 'video').length).toBeGreaterThanOrEqual(3);
+    await page.close();
+  });
+
+  test('导出设置下载 JSON 文件 / 导入设置从文件生效', async () => {
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/');
+    await openPanel(page);
+
+    // 导出：触发浏览器下载
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator("xpath=//span[text()='导出设置']").click(),
+    ]);
+    expect(download.suggestedFilename()).toBe('biliban-settings.json');
+    const stream = await download.createReadStream();
+    const chunks = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    const exported = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    expect(exported.version).toBe(4);
+    expect(Array.isArray(exported.builtinRules)).toBe(true);
+
+    // 导入：选择 JSON 文件 → 存储更新 → 面板重建显示新词条
+    const filePath = path.join(os.tmpdir(), 'biliban-import-test.json');
+    fs.writeFileSync(filePath, JSON.stringify({
+      version: 4,
+      enable: true,
+      words: [{ value: '导入测试词', scopes: ['global'] }],
+      durations: [],
+      rules: [],
+    }));
+    await page.locator('#blockObj_bilibiliConfig_wrapDiv input[type="file"]').setInputFiles(filePath);
+    await expect
+      .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).words)
+      .toEqual([{ value: '导入测试词', scopes: ['global'] }]);
+    await expect(page.locator('#bilibiliConfig_words_global')).toContainText('导入测试词');
     await page.close();
   });
 

@@ -25,12 +25,13 @@ import {
   TAB_CLASS,
   TAB_ACTIVE_CLASS,
 } from '../constants.js';
-import { CONFIG_VERSION } from '../config/defaults.js';
+import { CONFIG_VERSION, CONFIG_KEY, BUILTIN_RULES_VERSION } from '../config/defaults.js';
 import { SCOPES } from '../config/scopes.js';
 import { getTempEntries, setTempEntries, removeTempEntriesByScope } from '../config/temp-store.js';
+import { normalize } from '../config/store.js';
+import { BUILTIN_RULES } from '../rules/builtin-rules.js';
 import { getRuleStats } from '../engine/rule-stats.js';
 import { categoryFor } from '../engine/category.js';
-import { BUILTIN_RULES_VERSION } from '../config/defaults.js';
 import { RULE_STATS_CLASS, RULE_STATS_HIT_CLASS, TAB_CURRENT_CLASS } from '../constants.js';
 import { createGeneralSection } from './sections/general.js';
 import { createScopePane } from './sections/scope-pane.js';
@@ -66,7 +67,25 @@ export function createPanel(deps) {
   const entriesByScope = (list, scope) => (list ?? []).filter(entry => entry.scopes.includes(scope));
   let statsTimer = null;
 
+  /** 隐藏的文件选择框（导入设置） */
+  function createImportFileInput() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.style.display = 'none';
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file) {
+        return;
+      }
+      importSettings(await file.text());
+      input.value = '';
+    });
+    return input;
+  }
+
   function build() {
+    const importFileInput = createImportFileInput();
     wrapDiv = document.createElement('div');
     wrapDiv.id = WRAP_ID;
     wrapDiv.className = WRAP_DIV_CLASS + ' ' + (display ? WRAP_SHOW_CLASS : WRAP_HIDDEN_CLASS);
@@ -151,8 +170,11 @@ export function createPanel(deps) {
       }, SAVE_FLASH_MS);
       save(onlySaveButton);
     });
-    const toolsButton = createFooterBtn(TOOLS_BUTTON_CLASS, '导入/导出', '打开导入导出页（全部设置备份与迁移）', () => {
-      window.open(chrome.runtime.getURL('src/tools/import-export.html'), '_blank');
+    const exportButton = createFooterBtn(TOOLS_BUTTON_CLASS, '导出设置', '下载全部设置为 JSON 文件（含全部规则）', () => {
+      exportSettings();
+    });
+    const importButton = createFooterBtn(TOOLS_BUTTON_CLASS, '导入设置', '从 JSON 文件导入全部设置', () => {
+      importFileInput.click();
     });
     const cancelButton = createFooterBtn(CANCEL_BUTTON_CLASS, '取消', '关闭设置窗口（丢弃未保存编辑）', e => {
       toggle();
@@ -169,8 +191,47 @@ export function createPanel(deps) {
     ulNode.appendChild(saveButton);
     ulNode.appendChild(onlySaveButton);
     ulNode.appendChild(cancelButton);
-    ulNode.appendChild(toolsButton);
+    const toolsLi = document.createElement('li');
+    toolsLi.className = 'block_obj_tools_row';
+    toolsLi.appendChild(exportButton);
+    toolsLi.appendChild(importButton);
+    toolsLi.appendChild(importFileInput);
+    ulNode.appendChild(toolsLi);
     document.body.appendChild(wrapDiv);
+  }
+
+  /** 全量导出为 JSON 文件下载（内置规则未固化时以代码默认补全） */
+  function exportSettings() {
+    const exported = {
+      ...config,
+      builtinRules: config.builtinRules ?? BUILTIN_RULES.map(rule => ({ ...rule })),
+    };
+    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'biliban-settings.json';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+
+  /** 从 JSON 文件导入：解析 → 规范化（含旧版本迁移）→ 写存储；多标签同步走 onChanged */
+  function importSettings(text) {
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (error) {
+      console.error('[bilibili_block] 导入失败，JSON 解析错误:', error);
+      return;
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      console.error('[bilibili_block] 导入失败：内容不是有效的配置对象');
+      return;
+    }
+    const normalized = normalize(parsed);
+    chrome.storage.local.set({ [CONFIG_KEY]: normalized });
   }
 
   /** tab 类名：选中态与「当前页面」标记可叠加 */
