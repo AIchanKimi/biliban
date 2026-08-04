@@ -302,7 +302,6 @@ export const LIB_STYLE = `
     display: flex;
     flex-wrap: wrap;
     gap: 2px;
-    margin-top: 10px;
   }
   .block_obj_tab {
     background-color: transparent;
