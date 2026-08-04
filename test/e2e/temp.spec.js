@@ -18,10 +18,10 @@ async function openPanel(page) {
 
 async function addTempKeyword(page, value) {
   await page.locator('#bilibiliConfig_tab_search').click();
-  await page.fill('#bilibiliConfig_keywordInput_search', value);
-  await page.check('#bilibiliConfig_keywordTemp_search');
+  await page.fill('#bilibiliConfig_wordInput_search', value);
+  await page.check('#bilibiliConfig_wordTemp_search');
   await page
-    .locator("xpath=//input[@id='bilibiliConfig_keywordInput_search']/following::span[text()='添加'][1]")
+    .locator("xpath=//input[@id='bilibiliConfig_wordInput_search']/following::span[text()='添加'][1]")
     .click();
 }
 
@@ -34,11 +34,10 @@ test.describe('临时屏蔽（仅标签页内存）', () => {
     const extensionId = await getExtensionId(context);
     toolsPage = await openToolsPage(context, extensionId);
     await seedConfig(toolsPage, {
-      version: 2,
+      version: 3,
       enable: true,
       duration: { enable: false, minSeconds: 300 },
-      usernames: [],
-      keywords: [],
+      words: [],
       rules: [],
     });
   });
@@ -50,7 +49,7 @@ test.describe('临时屏蔽（仅标签页内存）', () => {
     await openPanel(page);
     await addTempKeyword(page, '广告');
     // chip 带临时徽标
-    await expect(page.locator('#bilibiliConfig_keywords_search .block_obj_child_badge_temp')).toHaveText('临时');
+    await expect(page.locator('#bilibiliConfig_words_search .block_obj_child_badge_temp')).toHaveText('临时');
     await page.locator("xpath=//span[@title='仅保存设置']").click();
 
     await expect
@@ -58,7 +57,7 @@ test.describe('临时屏蔽（仅标签页内存）', () => {
       .toBe(true);
     // 存储中无该词（临时不落盘）
     const stored = await readStorageKey(toolsPage, 'bilibili_config');
-    expect(stored.keywords).toEqual([]);
+    expect(stored.words).toEqual([]);
     await page.close();
   });
 

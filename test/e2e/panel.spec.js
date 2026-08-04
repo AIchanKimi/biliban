@@ -25,7 +25,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await setupBilibiliRoutes(context, { 'www.bilibili.com': 'video-cards.html' });
     const extensionId = await getExtensionId(context);
     toolsPage = await openToolsPage(context, extensionId);
-    await seedConfig(toolsPage, { version: 2, enable: true, duration: { enable: false, minSeconds: 300 }, usernames: [], keywords: [], rules: [] });
+    await seedConfig(toolsPage, { version: 3, enable: true, duration: { enable: false, minSeconds: 300 }, words: [], rules: [] });
   });
   test.afterAll(async () => context.close());
 
@@ -61,23 +61,23 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.locator('#bilibiliConfig_tab_search').click();
     await expect(page.locator('#bilibiliConfig_pane_search')).toBeVisible();
 
-    await page.fill('#bilibiliConfig_keywordInput_search', '测试关键字');
+    await page.fill('#bilibiliConfig_wordInput_search', '测试关键字');
     await page
-      .locator("xpath=//input[@id='bilibiliConfig_keywordInput_search']/following::span[text()='添加'][1]")
+      .locator("xpath=//input[@id='bilibiliConfig_wordInput_search']/following::span[text()='添加'][1]")
       .click();
-    await expect(page.locator('#bilibiliConfig_keywords_search')).toContainText('测试关键字');
+    await expect(page.locator('#bilibiliConfig_words_search')).toContainText('测试关键字');
 
     // 切走再切回：未保存编辑仍在（所有分类页常驻 DOM，仅切换显隐）
     await page.locator('#bilibiliConfig_tab_global').click();
     await page.locator('#bilibiliConfig_tab_search').click();
-    await expect(page.locator('#bilibiliConfig_keywords_search')).toContainText('测试关键字');
+    await expect(page.locator('#bilibiliConfig_words_search')).toContainText('测试关键字');
 
     // 用 title 锚定（闪烁期间 textContent 变化，text() 定位器会跟丢）
     const onlySave = page.locator("xpath=//span[@title='仅保存设置']");
     await onlySave.click();
     await expect(onlySave).toHaveText('已保存');
     await expect
-      .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).keywords)
+      .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).words)
       .toEqual([{ value: '测试关键字', scopes: ['search'] }]);
     await page.close();
   });
@@ -103,11 +103,11 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
-    await page.fill('#bilibiliConfig_keywordInput_global', '/一个很长的正则,含逗号/');
+    await page.fill('#bilibiliConfig_wordInput_global', '/一个很长的正则,含逗号/');
     await page
-      .locator("xpath=//input[@id='bilibiliConfig_keywordInput_global']/following::span[text()='添加'][1]")
+      .locator("xpath=//input[@id='bilibiliConfig_wordInput_global']/following::span[text()='添加'][1]")
       .click();
-    const chipText = page.locator('#bilibiliConfig_keywords_global .block_obj_child_text').first();
+    const chipText = page.locator('#bilibiliConfig_words_global .block_obj_child_text').first();
     await expect(chipText).toHaveClass(/block_obj_child_green/);
     await expect(chipText).toHaveAttribute('title', '/一个很长的正则,含逗号/');
     await expect(chipText).toContainText(' ... ');

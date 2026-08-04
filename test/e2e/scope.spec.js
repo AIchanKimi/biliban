@@ -5,16 +5,14 @@ import { setupBilibiliRoutes, setupApiRoute } from './helpers/bilibili-routes.js
 const NONE = 'block_obj_none'; // method 0：display 类
 const HIDDEN = 'block_obj_hidden'; // method 1：visibility 类
 
-const V2_CONFIG = {
-  version: 2,
+const V3_CONFIG = {
+  version: 3,
   enable: true,
   duration: { enable: false, minSeconds: 300 },
-  usernames: [
-    { value: '讨厌的UP', scopes: ['global'] },
+  words: [
+    { value: '讨厌的UP', scopes: ['global'] }, // UP主名精确匹配
     { value: '广告UP', scopes: ['global'] },
-  ],
-  keywords: [
-    { value: '广告', scopes: ['global'] },
+    { value: '广告', scopes: ['global'] }, // 标题包含匹配
     { value: '搜索专属词', scopes: ['search'] },
     { value: '动态广告', scopes: ['dynamics'] },
   ],
@@ -34,7 +32,7 @@ test.describe('作用域与内置规则', () => {
     await setupApiRoute(context, { ownerName: '正常UP' });
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);
-    await seedConfig(toolsPage, V2_CONFIG);
+    await seedConfig(toolsPage, V3_CONFIG);
   });
   test.afterAll(async () => context.close());
 
@@ -128,11 +126,13 @@ test.describe('首页特殊逻辑（轮播/排行榜）', () => {
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);
     await seedConfig(toolsPage, {
-      version: 2,
+      version: 3,
       enable: true,
       duration: { enable: false, minSeconds: 300 },
-      usernames: [{ value: '某排行榜UP', scopes: ['global'] }],
-      keywords: [{ value: '广告', scopes: ['global'] }],
+      words: [
+        { value: '某排行榜UP', scopes: ['global'] },
+        { value: '广告', scopes: ['global'] },
+      ],
       rules: [],
     });
 

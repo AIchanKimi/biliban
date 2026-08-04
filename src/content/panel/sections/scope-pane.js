@@ -1,6 +1,6 @@
-// 面板分节：单个作用域标签页的内容（用户名组 + 关键字组 + 自定义规则组 + 清空临时词）。
+// 面板分节：单个作用域标签页的内容（屏蔽词组 + 自定义规则组 + 清空临时词）。
 // 作用域由标签页承载，组内不再出现作用域选择。
-import { FIELD_ID_PREFIX, SCOPE_PANE_CLASS, UL_NODE_CLASS, SEPARATOR_LI_CLASS, SEPARATOR_TEXT_CLASS, LIST_DIV_CLASS, LI_USERNAME_CLASS, LI_KEYWORD_CLASS } from '../../constants.js';
+import { FIELD_ID_PREFIX, SCOPE_PANE_CLASS, UL_NODE_CLASS, SEPARATOR_LI_CLASS, SEPARATOR_TEXT_CLASS, LIST_DIV_CLASS, LI_WORDS_CLASS } from '../../constants.js';
 import { createEntriesGroup } from './entries.js';
 import { createRulesGroup } from './rules.js';
 import { buttonClicked, createSpanBtn } from '../input-row.js';
@@ -9,20 +9,18 @@ import { removeTempChips } from '../chips.js';
 /**
  * @param {{
  *   scope: string,
- *   usernames: ReadonlyArray<{ value: string, scopes: string[] }>,
- *   keywords: ReadonlyArray<{ value: string, scopes: string[] }>,
- *   tempUsernames: ReadonlyArray<{ value: string, scopes: string[] }>,
- *   tempKeywords: ReadonlyArray<{ value: string, scopes: string[] }>,
+ *   words: ReadonlyArray<{ value: string, scopes: string[] }>,
+ *   tempWords: ReadonlyArray<{ value: string, scopes: string[] }>,
  *   rules: ReadonlyArray<Record<string, unknown>>,
  *   onTempCleared: () => void,
  * }} params
  * @returns {{
  *   el: HTMLElement,
- *   collect: () => { usernames: object, keywords: object, rules: Array<Record<string, unknown>>, invalidCount: number },
+ *   collect: () => { words: { persistent: Array<object>, temp: Array<object> }, rules: Array<Record<string, unknown>>, invalidCount: number },
  * }}
  */
 export function createScopePane(params) {
-  const { scope, usernames, keywords, tempUsernames, tempKeywords, rules, onTempCleared } = params;
+  const { scope, words, tempWords, rules, onTempCleared } = params;
 
   const pane = document.createElement('li');
   pane.className = SCOPE_PANE_CLASS;
@@ -32,23 +30,11 @@ export function createScopePane(params) {
   innerUl.className = UL_NODE_CLASS;
   pane.appendChild(innerUl);
 
-  const usernameGroup = createEntriesGroup({
-    type: 'username',
+  const wordsGroup = createEntriesGroup({
     scope,
-    sectionLabel: '用户名（精确匹配）：',
-    placeholder: ' UP主名称，多个以半角逗号分隔 ',
-    liClassname: LI_USERNAME_CLASS,
-    entries: usernames,
-    tempEntries: tempUsernames,
-  });
-  const keywordGroup = createEntriesGroup({
-    type: 'keyword',
-    scope,
-    sectionLabel: '关键字或正则（标题匹配）：',
-    placeholder: ' 正则表达式格式: /Pattern/Modifier ',
-    liClassname: LI_KEYWORD_CLASS,
-    entries: keywords,
-    tempEntries: tempKeywords,
+    liClassname: LI_WORDS_CLASS,
+    entries: words,
+    tempEntries: tempWords,
   });
 
   const ruleSeparator = document.createElement('li');
@@ -80,17 +66,15 @@ export function createScopePane(params) {
   clearTempDiv.appendChild(clearTempBtn);
   clearTempLi.appendChild(clearTempDiv);
 
-  for (const li of [...usernameGroup.lis, ...keywordGroup.lis, ruleSeparator, rulesLi, clearTempLi]) {
+  for (const li of [...wordsGroup.lis, ruleSeparator, rulesLi, clearTempLi]) {
     innerUl.appendChild(li);
   }
 
   function collect() {
-    const usernamesResult = usernameGroup.collect();
-    const keywordsResult = keywordGroup.collect();
+    const wordsResult = wordsGroup.collect();
     const rulesResult = rulesGroup.collect();
     return {
-      usernames: usernamesResult,
-      keywords: keywordsResult,
+      words: wordsResult,
       rules: rulesResult.rules,
       invalidCount: rulesResult.invalidCount,
     };

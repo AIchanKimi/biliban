@@ -1,5 +1,5 @@
 // 内部迁移工具页逻辑（v5）：导入接受 v1（含油猴原形状，自动迁移）或 v2 JSON；导出 v2。
-import { isV2 } from '../content/config/migrate.js';
+import { isCurrentVersion } from '../content/config/migrate.js';
 import { normalize } from '../content/config/store.js';
 import { CONFIG_KEY, INFO_RECORD_KEY } from '../content/config/defaults.js';
 
@@ -31,12 +31,12 @@ document.getElementById('import').addEventListener('click', async () => {
     setStatus('内容不是有效的配置对象。');
     return;
   }
-  const migrated = !isV2(parsed);
+  const migrated = !isCurrentVersion(parsed);
   const config = normalize(parsed);
   await chrome.storage.local.set({ [CONFIG_KEY]: config });
   setStatus(
     migrated
-      ? '导入成功：已从 v1/油猴形状自动迁移（评论/白名单等废弃内容被丢弃）。刷新已打开的 bilibili 页面即可生效。'
+      ? '导入成功：已从旧版本形状自动迁移（v1 的评论/白名单等废弃内容被丢弃；v2 的用户名/关键字已合并为屏蔽词）。刷新已打开的 bilibili 页面即可生效。'
       : '导入成功。刷新已打开的 bilibili 页面即可生效。'
   );
 });

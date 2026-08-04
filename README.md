@@ -19,8 +19,7 @@
 
 - **通用**：总开关；时长按蔽（开关 + 分钟阈值，卡片内出现 `1:23` / `1:02:03` 形式时长且小于阈值时屏蔽）
 - **分类标签页**：面板顶部在 全局/首页/视频页/搜索/动态/空间 之间切换，下方管理当前分类的内容；「全局」中的词条处处生效
-- **屏蔽用户名**：精确匹配 UP 主名（`/正则/` 形式按字面字符串处理）
-- **屏蔽关键字**：标题包含匹配；正则格式 `/Pattern/Modifier`
+- **屏蔽词**：统一列表，每个词同时作用于标题与 UP 主名——普通词对标题「包含」匹配、对 UP 主名「精确」匹配；`/Pattern/Modifier` 正则在两者上都尝试匹配
 - **临时**：勾选后词条仅存于当前标签页内存——不落盘、不跨标签页同步、刷新页面即消失；适合「这次搜索先屏蔽某类内容」的场景；分类页内「清空临时词」可立即移除
 - **自定义规则**：每个分类页底部可管理规则——B 站改版导致内置选择器失效时，改/加卡片容器 CSS 选择器即可，无需改扩展代码；模式两档：「按屏蔽词过滤」（需标题/UP主选择器之一）与「直接隐藏」（命中即隐藏）
 - 底部三按钮：「保存并关闭」/「仅保存」（闪「已保存」）/「取消」（丢弃未保存编辑）
@@ -28,9 +27,13 @@
 
 ### 从旧版本 / 油猴脚本迁移
 
-存储形状在 v5 升级为 v2，首次加载自动迁移并写入备份键 `bilibili_config_v1_backup`（评论/白名单等被丢弃的内容可从备份键找回）。也可手动：Tampermonkey 仪表盘 → 原脚本「储存」页 → 复制 `bilibili_config` JSON → 打开扩展导入页 `chrome-extension://<扩展ID>/src/tools/import-export.html` 粘贴导入（扩展 ID 可在任意 bilibili 页面控制台执行 `document.documentElement.dataset.bilibanId` 查看）。
+存储形状在 v5 升级为 v3，首次加载自动迁移并按原版本写入备份键（`bilibili_config_v1_backup` / `bilibili_config_v2_backup`，被丢弃/合并前的原样可从备份键找回）。也可手动：Tampermonkey 仪表盘 → 原脚本「储存」页 → 复制 `bilibili_config` JSON → 打开扩展导入页 `chrome-extension://<扩展ID>/src/tools/import-export.html` 粘贴导入（扩展 ID 可在任意 bilibili 页面控制台执行 `document.documentElement.dataset.bilibanId` 查看）。
 
 ## Changelog
+
+### 5.1.0
+
+- 用户名与关键字合并为统一的「屏蔽词」列表：每个词同时过滤标题与 UP 主名（普通词：标题包含 / UP主名精确；正则：两者都匹配）；存储升级 v3，v2 的 usernames/keywords 自动合并迁移（备份至 `bilibili_config_v2_backup`）
 
 ### 5.0.0（破坏性变更）
 

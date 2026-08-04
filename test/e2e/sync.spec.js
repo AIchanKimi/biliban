@@ -2,12 +2,11 @@ import { test, expect } from '@playwright/test';
 import { launchContext, getExtensionId, openToolsPage, seedConfig } from './helpers/extension.js';
 import { setupBilibiliRoutes } from './helpers/bilibili-routes.js';
 
-const baseConfig = keywords => ({
-  version: 2,
+const baseConfig = words => ({
+  version: 3,
   enable: true,
   duration: { enable: false, minSeconds: 300 },
-  usernames: [],
-  keywords,
+  words,
   rules: [],
 });
 

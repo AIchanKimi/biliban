@@ -2,31 +2,29 @@
 // 单一真源：面板临时 chip 的增删一律经此模块；rebuild 时从此处重新渲染。
 import { normalizeScopes } from './scopes.js';
 
-const TEMP_TYPES = ['keyword', 'username'];
-
 let tempEntries = [];
 
-/** 词条身份键：值 + 类型 + 作用域集合（序无关） */
+/** 词条身份键：值 + 作用域集合（序无关） */
 function entryKey(entry) {
-  return JSON.stringify([entry.value, entry.type, [...entry.scopes].sort()]);
+  return JSON.stringify([entry.value, [...entry.scopes].sort()]);
 }
 
-/** @returns {Array<{ value: string, type: string, scopes: string[] }>} 副本 */
+/** @returns {Array<{ value: string, scopes: string[] }>} 副本 */
 export function getTempEntries() {
   return tempEntries.map(entry => ({ ...entry, scopes: [...entry.scopes] }));
 }
 
 /**
- * 添加临时词条：非法项（空值/坏类型）过滤，重复项跳过。
- * @param {ReadonlyArray<{ value: unknown, type: unknown, scopes?: unknown }>} items
+ * 添加临时词条：非法项（空值）过滤，重复项跳过。
+ * @param {ReadonlyArray<{ value: unknown, scopes?: unknown }>} items
  */
 export function addTempEntries(items) {
   const next = [...tempEntries];
   for (const item of items ?? []) {
-    if (!item || typeof item.value !== 'string' || item.value === '' || !TEMP_TYPES.includes(item.type)) {
+    if (!item || typeof item.value !== 'string' || item.value === '') {
       continue;
     }
-    const candidate = { value: item.value, type: item.type, scopes: normalizeScopes(item.scopes) };
+    const candidate = { value: item.value, scopes: normalizeScopes(item.scopes) };
     if (!next.some(existing => entryKey(existing) === entryKey(candidate))) {
       next.push(candidate);
     }
@@ -35,11 +33,11 @@ export function addTempEntries(items) {
 }
 
 /**
- * 按 值+类型+作用域 精确移除。
- * @param {{ value: string, type: string, scopes: ReadonlyArray<string> }} item
+ * 按 值+作用域 精确移除。
+ * @param {{ value: string, scopes: ReadonlyArray<string> }} item
  */
 export function removeTempEntry(item) {
-  const key = entryKey({ value: item.value, type: item.type, scopes: item.scopes });
+  const key = entryKey({ value: item.value, scopes: item.scopes });
   tempEntries = tempEntries.filter(entry => entryKey(entry) !== key);
 }
 
@@ -48,15 +46,16 @@ export function clearTempEntries() {
 }
 
 /**
- * 按类型清空。
- * @param {'keyword' | 'username'} type
+ * 整体替换（面板保存时以 DOM 收集结果为准）。非法项同样被过滤。
+ * @param {ReadonlyArray<{ value: unknown, scopes?: unknown }>} items
  */
-export function removeTempEntriesByType(type) {
-  tempEntries = tempEntries.filter(entry => entry.type !== type);
+export function setTempEntries(items) {
+  clearTempEntries();
+  addTempEntries(items);
 }
 
 /**
- * 按作用域清空（面板标签页内的「清空临时词」：该分类下用户名与关键字一起清）。
+ * 按作用域清空（面板标签页内的「清空临时词」）。
  * @param {string} scope
  */
 export function removeTempEntriesByScope(scope) {
@@ -64,12 +63,25 @@ export function removeTempEntriesByScope(scope) {
 }
 
 /**
- * 整体替换（面板保存时以 DOM 收集结果为准）。非法项同样被过滤。
- * @param {ReadonlyArray<{ value: unknown, type: unknown, scopes?: unknown }>} items
+ * 持久词条 + 临时词条合并（临时排后；同值同作用域持久优先去重）。
+ * @param {ReadonlyArray<{ value: unknown, scopes: ReadonlyArray<string> }>} persistentEntries
+ * @returns {Array<{ value: unknown, scopes: string[] }>}
  */
-export function setTempEntries(items) {
-  clearTempEntries();
-  addTempEntries(items);
+export function getEffectiveEntries(persistentEntries) {
+  const persistent = (Array.isArray(persistentEntries) ? persistentEntries : []).map(entry => ({
+    value: entry.value,
+    scopes: [...entry.scopes],
+  }));
+  const seen = new Set(persistent.map(entry => JSON.stringify([entry.value, [...entry.scopes].sort()])));
+  const merged = [...persistent];
+  for (const entry of tempEntries) {
+    const key = JSON.stringify([entry.value, [...entry.scopes].sort()]);
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push({ value: entry.value, scopes: [...entry.scopes] });
+    }
+  }
+  return merged;
 }
 
 /**
@@ -80,33 +92,6 @@ export function setTempEntries(items) {
 export function mergeTempEntries(runtimeConfig) {
   return {
     ...runtimeConfig,
-    usernames: getEffectiveEntries(runtimeConfig.usernames, 'username'),
-    keywords: getEffectiveEntries(runtimeConfig.keywords, 'keyword'),
+    words: getEffectiveEntries(runtimeConfig.words),
   };
-}
-
-/**
- * 持久词条 + 指定类型的临时词条合并（临时排后；同值同作用域持久优先去重）。
- * @param {ReadonlyArray<{ value: unknown, scopes: ReadonlyArray<string> }>} persistentEntries
- * @param {'keyword' | 'username'} type
- * @returns {Array<{ value: unknown, scopes: string[] }>}
- */
-export function getEffectiveEntries(persistentEntries, type) {
-  const persistent = (Array.isArray(persistentEntries) ? persistentEntries : []).map(entry => ({
-    value: entry.value,
-    scopes: [...entry.scopes],
-  }));
-  const seen = new Set(persistent.map(entry => JSON.stringify([entry.value, [...entry.scopes].sort()])));
-  const merged = [...persistent];
-  for (const entry of tempEntries) {
-    if (entry.type !== type) {
-      continue;
-    }
-    const key = JSON.stringify([entry.value, [...entry.scopes].sort()]);
-    if (!seen.has(key)) {
-      seen.add(key);
-      merged.push({ value: entry.value, scopes: [...entry.scopes] });
-    }
-  }
-  return merged;
 }

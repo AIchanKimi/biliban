@@ -1,8 +1,8 @@
-// 配置存储层 v2：chrome.storage.local 读写 + v1 迁移（备份+写回）+ 多标签页同步订阅。
-// 存储形状见 defaults.js；关键字正则转换见 serialize.js；临时词条在 temp-store.js（不落盘）。
-import { CONFIG_KEY, V1_BACKUP_KEY, INFO_RECORD_KEY, DEFAULT_MIN_SECONDS, CONFIG_VERSION } from './defaults.js';
-import { isV2, migrateV1toV2 } from './migrate.js';
-import { toRuntimeKeywordEntries, toStorageKeywordEntries } from './serialize.js';
+// 配置存储层 v3：chrome.storage.local 读写 + 旧版本迁移（版本化备份+写回）+ 多标签页同步订阅。
+// 存储形状见 defaults.js；屏蔽词正则转换见 serialize.js；临时词条在 temp-store.js（不落盘）。
+import { CONFIG_KEY, INFO_RECORD_KEY, DEFAULT_MIN_SECONDS, CONFIG_VERSION, backupKeyFor } from './defaults.js';
+import { isCurrentVersion, migrateToLatest } from './migrate.js';
+import { toRuntimeWordEntries, toStorageWordEntries } from './serialize.js';
 import { normalizeScopes } from './scopes.js';
 import { isRecordFresh } from '../util/date.js';
 
@@ -105,7 +105,7 @@ function sanitizeDuration(duration) {
  * @returns {Readonly<Record<string, unknown>>} 存储形状（关键字为字符串）
  */
 export function normalize(rawConfig) {
-  const base = isV2(rawConfig) ? rawConfig : migrateV1toV2(rawConfig);
+  const base = isCurrentVersion(rawConfig) ? rawConfig : migrateToLatest(rawConfig);
   const rules = [];
   for (const rule of Array.isArray(base.rules) ? base.rules : []) {
     const sanitized = sanitizeRule(rule);
@@ -117,8 +117,7 @@ export function normalize(rawConfig) {
     version: CONFIG_VERSION,
     enable: base.enable ?? true,
     duration: sanitizeDuration(base.duration),
-    usernames: sanitizeEntries(base.usernames),
-    keywords: sanitizeEntries(base.keywords),
+    words: sanitizeEntries(base.words),
     rules: Object.freeze(rules),
   });
 }
@@ -132,7 +131,7 @@ export function toRuntimeConfig(rawConfig) {
   const normalized = normalize(rawConfig);
   return Object.freeze({
     ...normalized,
-    keywords: toRuntimeKeywordEntries(normalized.keywords),
+    words: toRuntimeWordEntries(normalized.words),
   });
 }
 
@@ -144,7 +143,7 @@ export function toRuntimeConfig(rawConfig) {
 export function toStorageObject(runtimeConfig) {
   return {
     ...runtimeConfig,
-    keywords: toStorageKeywordEntries(runtimeConfig.keywords),
+    words: toStorageWordEntries(runtimeConfig.words),
   };
 }
 
@@ -168,12 +167,13 @@ export async function loadConfig() {
   if (rawConfig === null) {
     return normalize(null);
   }
-  if (isV2(rawConfig)) {
+  if (isCurrentVersion(rawConfig)) {
     return normalize(rawConfig);
   }
   const migrated = normalize(rawConfig);
   lastSavedJson = canonicalJson(migrated);
-  await chrome.storage.local.set({ [V1_BACKUP_KEY]: rawConfig, [CONFIG_KEY]: migrated });
+  const backupKey = backupKeyFor(Number.isInteger(rawConfig.version) ? rawConfig.version : 1);
+  await chrome.storage.local.set({ [backupKey]: rawConfig, [CONFIG_KEY]: migrated });
   return migrated;
 }
 

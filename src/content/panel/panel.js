@@ -52,8 +52,7 @@ export function createPanel(deps) {
   let cancelTimer = null;
   let display = false;
 
-  const tempByScopeAndType = (scope, type) =>
-    getTempEntries().filter(entry => entry.type === type && entry.scopes.includes(scope));
+  const tempByScope = scope => getTempEntries().filter(entry => entry.scopes.includes(scope));
   const entriesByScope = (list, scope) => (list ?? []).filter(entry => entry.scopes.includes(scope));
 
   function build() {
@@ -104,10 +103,8 @@ export function createPanel(deps) {
     panes = SCOPES.map(({ value: scope }) => {
       const pane = createScopePane({
         scope,
-        usernames: entriesByScope(config.usernames, scope),
-        keywords: entriesByScope(config.keywords, scope),
-        tempUsernames: tempByScopeAndType(scope, 'username'),
-        tempKeywords: tempByScopeAndType(scope, 'keyword'),
+        words: entriesByScope(config.words, scope),
+        tempWords: tempByScope(scope),
         rules: entriesByScope(config.rules, scope),
         onTempCleared: () => {
           removeTempEntriesByScope(scope);
@@ -175,24 +172,19 @@ export function createPanel(deps) {
   /** DOM → { storage 存储形状, temp 临时词条, invalidCount }（遍历全部分类页） */
   function collectFromDom() {
     const general = generalSection.collect();
-    const usernames = [];
-    const keywords = [];
+    const words = [];
     const temp = [];
     const rules = [];
     let invalidCount = 0;
     for (const { pane } of panes) {
       const result = pane.collect();
-      usernames.push(...result.usernames.persistent);
-      keywords.push(...result.keywords.persistent);
-      temp.push(
-        ...result.usernames.temp.map(entry => ({ ...entry, type: 'username' })),
-        ...result.keywords.temp.map(entry => ({ ...entry, type: 'keyword' }))
-      );
+      words.push(...result.words.persistent);
+      temp.push(...result.words.temp);
       rules.push(...result.rules);
       invalidCount += result.invalidCount;
     }
     return {
-      storage: { version: CONFIG_VERSION, enable: general.enable, duration: general.duration, usernames, keywords, rules },
+      storage: { version: CONFIG_VERSION, enable: general.enable, duration: general.duration, words, rules },
       temp,
       invalidCount,
     };

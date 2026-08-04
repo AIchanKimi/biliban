@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { REGEX_LITERAL_RE, parseRegexLiteral, toRuntimeKeywordEntries, toStorageKeywordEntries } from '../../src/content/config/serialize.js';
+import { REGEX_LITERAL_RE, parseRegexLiteral, toRuntimeWordEntries, toStorageWordEntries } from '../../src/content/config/serialize.js';
 
 describe('REGEX_LITERAL_RE', () => {
   test('识别标准正则字面量', () => {
@@ -30,9 +30,9 @@ describe('parseRegexLiteral', () => {
   });
 });
 
-describe('toRuntimeKeywordEntries', () => {
+describe('toRuntimeWordEntries', () => {
   test('正则字面量 value 重建为 RegExp，scopes 保留', () => {
-    const result = toRuntimeKeywordEntries([
+    const result = toRuntimeWordEntries([
       { value: '广告', scopes: ['global'] },
       { value: '/^直播.*预告$/i', scopes: ['search'] },
     ]);
@@ -47,7 +47,7 @@ describe('toRuntimeKeywordEntries', () => {
     const original = console.error;
     console.error = (...args) => errors.push(args);
     try {
-      const result = toRuntimeKeywordEntries([
+      const result = toRuntimeWordEntries([
         { value: '/(/', scopes: ['global'] },
         { value: '正常词', scopes: ['global'] },
       ]);
@@ -61,35 +61,35 @@ describe('toRuntimeKeywordEntries', () => {
 
   test('返回新数组新对象，不修改入参', () => {
     const input = [{ value: '/a/', scopes: ['global'] }];
-    const result = toRuntimeKeywordEntries(input);
+    const result = toRuntimeWordEntries(input);
     expect(result).not.toBe(input);
     expect(input[0].value).toBe('/a/');
   });
 
   test('非数组输入返回空数组', () => {
-    expect(toRuntimeKeywordEntries(undefined)).toEqual([]);
-    expect(toRuntimeKeywordEntries(null)).toEqual([]);
+    expect(toRuntimeWordEntries(undefined)).toEqual([]);
+    expect(toRuntimeWordEntries(null)).toEqual([]);
   });
 });
 
-describe('toStorageKeywordEntries', () => {
+describe('toStorageWordEntries', () => {
   test('RegExp 实例序列化为 /source/flags 字符串', () => {
-    const result = toStorageKeywordEntries([{ value: new RegExp('abc', 'gi'), scopes: ['global'] }]);
+    const result = toStorageWordEntries([{ value: new RegExp('abc', 'gi'), scopes: ['global'] }]);
     expect(result).toEqual([{ value: '/abc/gi', scopes: ['global'] }]);
   });
 
   test('字符串原样通过', () => {
-    expect(toStorageKeywordEntries([{ value: '广告', scopes: ['home'] }])).toEqual([
+    expect(toStorageWordEntries([{ value: '广告', scopes: ['home'] }])).toEqual([
       { value: '广告', scopes: ['home'] },
     ]);
   });
 
   test('往返一致', () => {
     const storage = [{ value: '/a,b/gi', scopes: ['search'] }, { value: '普通', scopes: ['global'] }];
-    expect(toStorageKeywordEntries(toRuntimeKeywordEntries(storage))).toEqual(storage);
+    expect(toStorageWordEntries(toRuntimeWordEntries(storage))).toEqual(storage);
   });
 
   test('非数组输入返回空数组', () => {
-    expect(toStorageKeywordEntries(undefined)).toEqual([]);
+    expect(toStorageWordEntries(undefined)).toEqual([]);
   });
 });

@@ -1,5 +1,5 @@
-// 面板分节：词条组（某作用域标签页内的用户名或关键字一组）。
-// 作用域由所在标签页决定，输入行不再带作用域下拉；「临时」勾选保留。
+// 面板分节：屏蔽词条组（某作用域标签页内一组）。
+// 词条判定时同时作用于标题与 UP主名；作用域由所在标签页决定，输入行不带作用域选择。
 // 保存收集以 DOM chips 为准：持久词条入存储，临时词条回写 temp-store。
 import {
   FIELD_ID_PREFIX,
@@ -17,16 +17,15 @@ import { seedEntries, extractEntriesFromEl, prependEntry, removeValues } from '.
 import { buttonClicked, createSpanBtn, toggleList, copyToClipboard } from '../input-row.js';
 
 /**
- * 新词条校验：空/纯空白拒绝；关键字的正则字面量必须可编译。
+ * 新词条校验：空/纯空白拒绝；正则字面量必须可编译。
  * @param {string} value
- * @param {'keyword' | 'username'} type
  * @returns {boolean}
  */
-export function isValidNewEntry(value, type) {
+export function isValidNewEntry(value) {
   if (typeof value !== 'string' || value.trim() === '') {
     return false;
   }
-  if (type === 'keyword' && REGEX_LITERAL_RE.test(value)) {
+  if (REGEX_LITERAL_RE.test(value)) {
     const parsed = parseRegexLiteral(value);
     try {
       new RegExp(parsed.pattern, parsed.flags);
@@ -37,22 +36,22 @@ export function isValidNewEntry(value, type) {
   return true;
 }
 
-function separatorLi(label) {
+function separatorLi(label, title = '') {
   const li = document.createElement('li');
   li.className = SEPARATOR_LI_CLASS;
   const text = document.createElement('span');
   text.className = SEPARATOR_TEXT_CLASS;
   text.textContent = label;
+  if (title) {
+    text.title = title;
+  }
   li.appendChild(text);
   return li;
 }
 
 /**
  * @param {{
- *   type: 'keyword' | 'username',
  *   scope: string,
- *   sectionLabel: string,
- *   placeholder: string,
  *   liClassname: string,
  *   entries: ReadonlyArray<{ value: string, scopes: string[] }>,
  *   tempEntries: ReadonlyArray<{ value: string, scopes: string[] }>,
@@ -60,10 +59,10 @@ function separatorLi(label) {
  * @returns {{ lis: HTMLElement[], collect: () => { persistent: Array<{ value: string, scopes: string[] }>, temp: Array<{ value: string, scopes: string[] }> } }}
  */
 export function createEntriesGroup(params) {
-  const { type, scope, sectionLabel, placeholder, liClassname, entries, tempEntries } = params;
-  const inputId = `${FIELD_ID_PREFIX}${type}Input_${scope}`;
-  const tempId = `${FIELD_ID_PREFIX}${type}Temp_${scope}`;
-  const listId = `${FIELD_ID_PREFIX}${type === 'keyword' ? 'keywords' : 'usernames'}_${scope}`;
+  const { scope, liClassname, entries, tempEntries } = params;
+  const inputId = `${FIELD_ID_PREFIX}wordInput_${scope}`;
+  const tempId = `${FIELD_ID_PREFIX}wordTemp_${scope}`;
+  const listId = `${FIELD_ID_PREFIX}words_${scope}`;
 
   // ---- 输入行 ----
   const inputLi = document.createElement('li');
@@ -77,8 +76,8 @@ export function createEntriesGroup(params) {
   input.type = 'text';
   input.id = inputId;
   input.className = INPUT_CLASS;
-  input.placeholder = placeholder;
-  input.title = '同时输入多个时以半角逗号分隔；正则格式 /Pattern/Modifier';
+  input.placeholder = ' 多个以半角逗号分隔；正则格式 /Pattern/Modifier ';
+  input.title = '标题包含匹配；UP主名精确匹配；/正则/ 两者都匹配';
   inputSpan.appendChild(input);
 
   const tempCheckbox = document.createElement('input');
@@ -101,7 +100,7 @@ export function createEntriesGroup(params) {
       return false;
     }
     const temp = tempCheckbox.checked;
-    const values = stringToArray(textValue).filter(value => isValidNewEntry(value, type));
+    const values = stringToArray(textValue).filter(isValidNewEntry);
     if (values.length === 0) {
       return false;
     }
@@ -182,5 +181,7 @@ export function createEntriesGroup(params) {
     return extractEntriesFromEl(listEl);
   }
 
-  return { lis: [separatorLi(sectionLabel), inputLi, listLi], collect };
+  const sectionLabel = '屏蔽词：';
+  const sectionTitle = '标题包含匹配；UP主名精确匹配；/正则/ 两者都匹配';
+  return { lis: [separatorLi(sectionLabel, sectionTitle), inputLi, listLi], collect };
 }

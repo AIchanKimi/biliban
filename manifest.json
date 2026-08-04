@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "哔哩哔哩 - 屏蔽指定内容",
-  "version": "5.0.0",
-  "description": "按用户名/关键字/正则屏蔽 bilibili 视频卡片，支持页面作用域、临时屏蔽、时长按蔽与自定义选择器规则；多标签页同步。",
+  "version": "5.1.0",
+  "description": "按屏蔽词（用户名/关键字/正则）屏蔽 bilibili 视频卡片，支持页面作用域、临时屏蔽、时长按蔽与自定义选择器规则；多标签页同步。",
   "permissions": ["storage"],
   "host_permissions": ["*://*.bilibili.com/*", "https://api.bilibili.com/*"],
   "content_scripts": [

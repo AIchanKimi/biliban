@@ -5,11 +5,10 @@ import { setupBilibiliRoutes } from './helpers/bilibili-routes.js';
 const HIDDEN = 'block_obj_hidden'; // .video-card-common 规则 method 1
 
 const baseConfig = duration => ({
-  version: 2,
+  version: 3,
   enable: true,
   duration,
-  usernames: [],
-  keywords: [],
+  words: [],
   rules: [],
 });
 

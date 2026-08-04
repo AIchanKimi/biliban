@@ -19,13 +19,13 @@ export function parseRegexLiteral(text) {
 }
 
 /**
- * 读取时转换：关键字词条的正则字面量重建为 RegExp。
+ * 读取时转换：屏蔽词词条的正则字面量重建为 RegExp。
  * 非法正则 console.error 后跳过该词条（保留 v1 诊断文案与 4.6.2 修复语义）。
  * 返回新数组新对象，不修改入参。
  * @param {ReadonlyArray<{ value: string, scopes: ReadonlyArray<string> }>} entries
  * @returns {Array<{ value: string | RegExp, scopes: string[] }>}
  */
-export function toRuntimeKeywordEntries(entries) {
+export function toRuntimeWordEntries(entries) {
   const source = Array.isArray(entries) ? entries : [];
   const result = [];
   for (const entry of source) {
@@ -48,7 +48,7 @@ export function toRuntimeKeywordEntries(entries) {
  * @param {ReadonlyArray<{ value: string | RegExp, scopes: ReadonlyArray<string> }>} entries
  * @returns {Array<{ value: string, scopes: string[] }>}
  */
-export function toStorageKeywordEntries(entries) {
+export function toStorageWordEntries(entries) {
   const source = Array.isArray(entries) ? entries : [];
   return source.map(entry => ({
     value: entry.value instanceof RegExp ? `/${entry.value.source}/${entry.value.flags}` : entry.value,

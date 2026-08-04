@@ -62,8 +62,7 @@ export const CHIP_BADGE_CLASS = 'block_obj_child_badge';
 export const CHIP_TEMP_BADGE_CLASS = 'block_obj_child_badge block_obj_child_badge_temp';
 export const RULE_ROW_CLASS = 'block_obj_rule_row';
 export const RULE_MORE_CLASS = 'block_obj_rule_more';
-export const LI_USERNAME_CLASS = 'block_obj_li_username';
-export const LI_KEYWORD_CLASS = 'block_obj_li_keyword';
+export const LI_WORDS_CLASS = 'block_obj_li_words';
 
 // 时序（毫秒）
 export const INTERVAL_TIME = 100; // resolver 请求节流基数

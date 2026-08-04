@@ -5,11 +5,10 @@ import { setupBilibiliRoutes } from './helpers/bilibili-routes.js';
 const NONE = 'block_obj_none';
 
 const baseConfig = rules => ({
-  version: 2,
+  version: 3,
   enable: true,
   duration: { enable: false, minSeconds: 300 },
-  usernames: [],
-  keywords: [{ value: '匹配词', scopes: ['global'] }],
+  words: [{ value: '匹配词', scopes: ['global'] }],
   rules,
 });
 
