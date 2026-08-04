@@ -1,24 +1,48 @@
-// 旧 key 迁移：regArray → keywordArray、commentRegArray → commentArray。
-// 对等 Block_Obj init() 的 regConversion 合并逻辑，并修复其崩溃 bug：
-// 原实现 config[key].concat(config[ori]) 在目标 key 缺失时抛 TypeError，
-// 这里将缺失的目标 key 视为空数组。
-import { LEGACY_MIGRATIONS } from './defaults.js';
+// 存储迁移：v1（含油猴原脚本形状）→ v2。纯函数；备份与写回由 store.loadConfig 负责。
+// v1 丢弃项（不可逆，loadConfig 迁移前写 bilibili_config_v1_backup）：
+//   commentArray/whitelistArray、全部评论/直播/相薄/消息中心开关、表情转换、按钮开关等。
+import { CONFIG_VERSION, DEFAULT_MIN_SECONDS } from './defaults.js';
 
 /**
- * 应用旧 key 迁移，返回新对象（不修改入参）。
- * 迁移后 ori key 被移除（下次保存即持久化，对等原实现）。
- * @param {Record<string, unknown> | null | undefined} rawConfig
- * @returns {Record<string, unknown>}
+ * @param {unknown} rawConfig
+ * @returns {boolean} 已是 v2 形状
  */
-export function applyMigrations(rawConfig) {
-  const result = { ...(rawConfig ?? {}) };
-  for (const { key, ori } of LEGACY_MIGRATIONS) {
-    const legacy = result[ori];
-    if (Array.isArray(legacy)) {
-      const current = Array.isArray(result[key]) ? result[key] : [];
-      result[key] = [...current, ...legacy];
-      delete result[ori];
+export function isV2(rawConfig) {
+  return Boolean(rawConfig) && rawConfig.version === CONFIG_VERSION;
+}
+
+/**
+ * @param {unknown} list
+ * @returns {Array<{ value: string, scopes: string[] }>}
+ */
+function toGlobalEntries(list) {
+  const source = Array.isArray(list) ? list : [];
+  const entries = [];
+  for (const item of source) {
+    if (typeof item === 'string' && item !== '') {
+      entries.push({ value: item, scopes: ['global'] });
     }
   }
-  return result;
+  return entries;
+}
+
+/**
+ * v1 → v2 迁移（不修改入参）。v1 keywordArray 与 TM 旧键 regArray 合并为全局关键字词条。
+ * @param {Record<string, unknown> | null | undefined} rawConfig
+ * @returns {{ version: number, enable: boolean, duration: { enable: boolean, minSeconds: number }, usernames: Array<{ value: string, scopes: string[] }>, keywords: Array<{ value: string, scopes: string[] }>, rules: [] }}
+ */
+export function migrateV1toV2(rawConfig) {
+  const source = rawConfig ?? {};
+  const keywordSource = [
+    ...(Array.isArray(source.keywordArray) ? source.keywordArray : []),
+    ...(Array.isArray(source.regArray) ? source.regArray : []),
+  ];
+  return {
+    version: CONFIG_VERSION,
+    enable: source.functionEnable ?? true,
+    duration: { enable: false, minSeconds: DEFAULT_MIN_SECONDS },
+    usernames: toGlobalEntries(source.usernameArray),
+    keywords: toGlobalEntries(keywordSource),
+    rules: [],
+  };
 }

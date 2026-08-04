@@ -1,37 +1,24 @@
-// 配置默认值与存储常量（对等 target.js 414–435、453–462）
+// 配置默认值与存储常量（v5 存储 v2 形状）。
+// v4 及更早字段（functionEnable/commentArray/whitelistArray 等）已由 config/migrate.js 迁移丢弃。
 
 export const CONFIG_KEY = 'bilibili_config';
+export const V1_BACKUP_KEY = 'bilibili_config_v1_backup';
 export const INFO_RECORD_KEY = 'infoRecord';
+export const CONFIG_VERSION = 2;
 
-// 默认配置（frozen）——字段与默认值逐字对等 target.js 414–435
-export const DEFAULT_CONFIG = Object.freeze({
-  functionEnable: true,
-  usernameEnable: true,
-  keywordEnable: true,
-  whitelistEnable: false,
-  commentEnable: false,
-  commentKeywordEnable: false,
-  commentFans: false,
-  convertEmojiEnable: false,
-  showBlockUserBtnEnable: false,
-  showBangBtnEnable: false,
-  liveEnable: false,
-  picEnable: false,
-  messageReplyEnable: false,
-  messageReplyDelEnable: false,
-  dynamicVideo: false,
-  dynamicContent: false,
-  usernameArray: [],
-  keywordArray: [],
-  commentArray: [],
-  whitelistArray: [],
+// 时长按蔽默认阈值（秒）：5 分钟
+export const DEFAULT_MIN_SECONDS = 300;
+
+export const DEFAULT_DURATION = Object.freeze({
+  enable: false,
+  minSeconds: DEFAULT_MIN_SECONDS,
 });
 
-// getConfig() 读取时执行 字符串→RegExp 转换的 key（对等 Block_Obj regConversion）
-export const REG_CONVERSION_KEYS = Object.freeze(['keywordArray', 'commentArray']);
-
-// 旧 key 迁移对（对等 target.js 453–462 的 Block_Obj 构造参数）
-export const LEGACY_MIGRATIONS = Object.freeze([
-  Object.freeze({ key: 'keywordArray', ori: 'regArray' }),
-  Object.freeze({ key: 'commentArray', ori: 'commentRegArray' }),
-]);
+export const DEFAULT_CONFIG = Object.freeze({
+  version: CONFIG_VERSION,
+  enable: true,
+  duration: DEFAULT_DURATION,
+  usernames: [],
+  keywords: [],
+  rules: [],
+});

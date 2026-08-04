@@ -1,6 +1,5 @@
-// 正则序列化：存储中一律为 '/pattern/flags' 字符串，读取时按需重建 RegExp。
-// 对等 Block_Obj v3.0.3 getConfig()/convertArray 行为。
-import { REG_CONVERSION_KEYS } from './defaults.js';
+// 正则序列化 v5：存储中关键字一律为 '/pattern/flags' 字符串，读取时重建 RegExp。
+// 仅关键字词条参与转换；用户名按字面字符串精确匹配（v1 语义保留）。
 
 // 正则字面量形式识别（Block_Obj 全局使用同一模式）
 export const REGEX_LITERAL_RE = /^\/.+\/[a-z]*$/i;
@@ -20,40 +19,39 @@ export function parseRegexLiteral(text) {
 }
 
 /**
- * 读取时转换：仅对 REG_CONVERSION_KEYS 中的 key，将正则字面量字符串重建为 RegExp。
- * 非法正则 console.error 后静默跳过（对等 Block_Obj 行为与脚本 4.6.2 修复）。
- * 返回新数组（string | RegExp 混合），不修改入参。
- * @param {ReadonlyArray<string>} list
- * @param {string} key 配置字段名
- * @returns {Array<string | RegExp>}
+ * 读取时转换：关键字词条的正则字面量重建为 RegExp。
+ * 非法正则 console.error 后跳过该词条（保留 v1 诊断文案与 4.6.2 修复语义）。
+ * 返回新数组新对象，不修改入参。
+ * @param {ReadonlyArray<{ value: string, scopes: ReadonlyArray<string> }>} entries
+ * @returns {Array<{ value: string | RegExp, scopes: string[] }>}
  */
-export function toRuntimeValue(list, key) {
-  const source = Array.isArray(list) ? list : [];
-  if (!REG_CONVERSION_KEYS.includes(key)) {
-    return [...source];
-  }
+export function toRuntimeKeywordEntries(entries) {
+  const source = Array.isArray(entries) ? entries : [];
   const result = [];
-  for (const item of source) {
-    const parsed = parseRegexLiteral(item);
+  for (const entry of source) {
+    const parsed = parseRegexLiteral(entry.value);
     if (parsed) {
       try {
-        result.push(new RegExp(parsed.pattern, parsed.flags));
+        result.push({ value: new RegExp(parsed.pattern, parsed.flags), scopes: [...entry.scopes] });
       } catch (error) {
         console.error('存在错误的正则表达式: ', error);
       }
     } else {
-      result.push(item);
+      result.push({ value: entry.value, scopes: [...entry.scopes] });
     }
   }
   return result;
 }
 
 /**
- * 写入时转换：RegExp 实例 → '/source/flags' 字符串；字符串原样。返回新数组。
- * @param {ReadonlyArray<string | RegExp>} list
- * @returns {string[]}
+ * 写入时转换：RegExp 实例 → '/source/flags' 字符串；字符串原样。返回新数组新对象。
+ * @param {ReadonlyArray<{ value: string | RegExp, scopes: ReadonlyArray<string> }>} entries
+ * @returns {Array<{ value: string, scopes: string[] }>}
  */
-export function toStorageValue(list) {
-  const source = Array.isArray(list) ? list : [];
-  return source.map(item => (item instanceof RegExp ? `/${item.source}/${item.flags}` : item));
+export function toStorageKeywordEntries(entries) {
+  const source = Array.isArray(entries) ? entries : [];
+  return source.map(entry => ({
+    value: entry.value instanceof RegExp ? `/${entry.value.source}/${entry.value.flags}` : entry.value,
+    scopes: [...entry.scopes],
+  }));
 }

@@ -31,6 +31,8 @@
         "src/content/config/serialize.js",
         "src/content/config/migrate.js",
         "src/content/config/store.js",
+        "src/content/config/scopes.js",
+        "src/content/config/temp-store.js",
         "src/content/matcher/decide-text.js",
         "src/content/matcher/decide-username.js",
         "src/content/matcher/whitelist.js",

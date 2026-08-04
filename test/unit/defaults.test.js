@@ -1,47 +1,35 @@
 import { describe, test, expect } from 'bun:test';
-import { DEFAULT_CONFIG, REG_CONVERSION_KEYS, LEGACY_MIGRATIONS, CONFIG_KEY, INFO_RECORD_KEY } from '../../src/content/config/defaults.js';
+import { CONFIG_KEY, V1_BACKUP_KEY, INFO_RECORD_KEY, CONFIG_VERSION, DEFAULT_CONFIG } from '../../src/content/config/defaults.js';
 
-describe('config/defaults', () => {
-  test('CONFIG_KEY 与 INFO_RECORD_KEY 对等原脚本存储 key', () => {
+describe('v2 默认配置', () => {
+  test('存储键与版本', () => {
     expect(CONFIG_KEY).toBe('bilibili_config');
+    expect(V1_BACKUP_KEY).toBe('bilibili_config_v1_backup');
     expect(INFO_RECORD_KEY).toBe('infoRecord');
+    expect(CONFIG_VERSION).toBe(2);
   });
 
-  test('DEFAULT_CONFIG 包含全部 16 个开关与 4 个列表，默认值对等 target.js 414–435', () => {
-    expect(DEFAULT_CONFIG.functionEnable).toBe(true);
-    expect(DEFAULT_CONFIG.usernameEnable).toBe(true);
-    expect(DEFAULT_CONFIG.keywordEnable).toBe(true);
-    expect(DEFAULT_CONFIG.whitelistEnable).toBe(false);
-    expect(DEFAULT_CONFIG.commentEnable).toBe(false);
-    expect(DEFAULT_CONFIG.commentKeywordEnable).toBe(false);
-    expect(DEFAULT_CONFIG.commentFans).toBe(false);
-    expect(DEFAULT_CONFIG.convertEmojiEnable).toBe(false);
-    expect(DEFAULT_CONFIG.showBlockUserBtnEnable).toBe(false);
-    expect(DEFAULT_CONFIG.showBangBtnEnable).toBe(false);
-    expect(DEFAULT_CONFIG.liveEnable).toBe(false);
-    expect(DEFAULT_CONFIG.picEnable).toBe(false);
-    expect(DEFAULT_CONFIG.messageReplyEnable).toBe(false);
-    expect(DEFAULT_CONFIG.messageReplyDelEnable).toBe(false);
-    expect(DEFAULT_CONFIG.dynamicVideo).toBe(false);
-    expect(DEFAULT_CONFIG.dynamicContent).toBe(false);
-    expect(DEFAULT_CONFIG.usernameArray).toEqual([]);
-    expect(DEFAULT_CONFIG.keywordArray).toEqual([]);
-    expect(DEFAULT_CONFIG.commentArray).toEqual([]);
-    expect(DEFAULT_CONFIG.whitelistArray).toEqual([]);
-  });
-
-  test('DEFAULT_CONFIG 被冻结（不可变）', () => {
+  test('形状：总开关 + 时长 + 三个列表', () => {
+    expect(DEFAULT_CONFIG).toEqual({
+      version: 2,
+      enable: true,
+      duration: { enable: false, minSeconds: 300 },
+      usernames: [],
+      keywords: [],
+      rules: [],
+    });
     expect(Object.isFrozen(DEFAULT_CONFIG)).toBe(true);
+    expect(Object.isFrozen(DEFAULT_CONFIG.duration)).toBe(true);
   });
 
-  test('REG_CONVERSION_KEYS 仅含 keywordArray 与 commentArray', () => {
-    expect([...REG_CONVERSION_KEYS]).toEqual(['keywordArray', 'commentArray']);
-  });
-
-  test('LEGACY_MIGRATIONS 对等旧 key 迁移映射', () => {
-    expect(LEGACY_MIGRATIONS.map(m => ({ key: m.key, ori: m.ori }))).toEqual([
-      { key: 'keywordArray', ori: 'regArray' },
-      { key: 'commentArray', ori: 'commentRegArray' },
-    ]);
+  test('不再包含 v1 废弃字段', () => {
+    for (const legacyKey of [
+      'functionEnable', 'whitelistEnable', 'commentEnable', 'commentKeywordEnable', 'commentFans',
+      'convertEmojiEnable', 'showBlockUserBtnEnable', 'showBangBtnEnable', 'liveEnable', 'picEnable',
+      'messageReplyEnable', 'messageReplyDelEnable', 'dynamicVideo', 'dynamicContent',
+      'usernameArray', 'keywordArray', 'commentArray', 'whitelistArray',
+    ]) {
+      expect(DEFAULT_CONFIG[legacyKey]).toBeUndefined();
+    }
   });
 });

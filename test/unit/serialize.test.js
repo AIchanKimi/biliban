@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { REGEX_LITERAL_RE, parseRegexLiteral, toRuntimeValue, toStorageValue } from '../../src/content/config/serialize.js';
+import { REGEX_LITERAL_RE, parseRegexLiteral, toRuntimeKeywordEntries, toStorageKeywordEntries } from '../../src/content/config/serialize.js';
 
 describe('REGEX_LITERAL_RE', () => {
   test('识别标准正则字面量', () => {
@@ -20,7 +20,6 @@ describe('parseRegexLiteral', () => {
   test('拆分 pattern 与 flags', () => {
     expect(parseRegexLiteral('/abc/gi')).toEqual({ pattern: 'abc', flags: 'gi' });
     expect(parseRegexLiteral('/a,b/')).toEqual({ pattern: 'a,b', flags: '' });
-    // pattern 内含斜杠：贪婪到最后一个 '/flags'
     expect(parseRegexLiteral('/a\\/b/i')).toEqual({ pattern: 'a\\/b', flags: 'i' });
   });
 
@@ -31,33 +30,28 @@ describe('parseRegexLiteral', () => {
   });
 });
 
-describe('toRuntimeValue', () => {
-  test('keywordArray/commentArray 中的正则字面量重建为 RegExp', () => {
-    const result = toRuntimeValue(['广告', '/^直播.*预告$/i'], 'keywordArray');
-    expect(result[0]).toBe('广告');
-    expect(result[1]).toBeInstanceOf(RegExp);
-    expect(result[1].test('直播明日预告')).toBe(true);
-    expect(result[1].flags).toBe('i');
+describe('toRuntimeKeywordEntries', () => {
+  test('正则字面量 value 重建为 RegExp，scopes 保留', () => {
+    const result = toRuntimeKeywordEntries([
+      { value: '广告', scopes: ['global'] },
+      { value: '/^直播.*预告$/i', scopes: ['search'] },
+    ]);
+    expect(result[0].value).toBe('广告');
+    expect(result[1].value).toBeInstanceOf(RegExp);
+    expect(result[1].value.test('直播明日预告')).toBe(true);
+    expect(result[1].scopes).toEqual(['search']);
   });
 
-  test('commentArray 同样转换', () => {
-    const result = toRuntimeValue(['/xx+/'], 'commentArray');
-    expect(result[0]).toBeInstanceOf(RegExp);
-  });
-
-  test('非转换 key 一律保持字符串（usernameArray 存的是用户名/勋章名）', () => {
-    const result = toRuntimeValue(['/看着像正则/'], 'usernameArray');
-    expect(result[0]).toBe('/看着像正则/');
-    expect(result[0]).not.toBeInstanceOf(RegExp);
-  });
-
-  test('非法正则 console.error 后静默跳过（4.6.2 修复对等）', () => {
+  test('非法正则 console.error 后跳过该词条', () => {
     const errors = [];
     const original = console.error;
     console.error = (...args) => errors.push(args);
     try {
-      const result = toRuntimeValue(['/(/', '正常词'], 'keywordArray');
-      expect(result).toEqual(['正常词']);
+      const result = toRuntimeKeywordEntries([
+        { value: '/(/', scopes: ['global'] },
+        { value: '正常词', scopes: ['global'] },
+      ]);
+      expect(result.map(e => e.value)).toEqual(['正常词']);
       expect(errors.length).toBe(1);
       expect(errors[0][0]).toBe('存在错误的正则表达式: ');
     } finally {
@@ -65,35 +59,37 @@ describe('toRuntimeValue', () => {
     }
   });
 
-  test('返回新数组，不修改入参', () => {
-    const input = ['/a/'];
-    const result = toRuntimeValue(input, 'keywordArray');
+  test('返回新数组新对象，不修改入参', () => {
+    const input = [{ value: '/a/', scopes: ['global'] }];
+    const result = toRuntimeKeywordEntries(input);
     expect(result).not.toBe(input);
-    expect(input[0]).toBe('/a/');
+    expect(input[0].value).toBe('/a/');
   });
 
   test('非数组输入返回空数组', () => {
-    expect(toRuntimeValue(undefined, 'keywordArray')).toEqual([]);
-    expect(toRuntimeValue(null, 'commentArray')).toEqual([]);
+    expect(toRuntimeKeywordEntries(undefined)).toEqual([]);
+    expect(toRuntimeKeywordEntries(null)).toEqual([]);
   });
 });
 
-describe('toStorageValue', () => {
+describe('toStorageKeywordEntries', () => {
   test('RegExp 实例序列化为 /source/flags 字符串', () => {
-    expect(toStorageValue([new RegExp('abc', 'gi')])).toEqual(['/abc/gi']);
+    const result = toStorageKeywordEntries([{ value: new RegExp('abc', 'gi'), scopes: ['global'] }]);
+    expect(result).toEqual([{ value: '/abc/gi', scopes: ['global'] }]);
   });
 
   test('字符串原样通过', () => {
-    expect(toStorageValue(['广告', '/x/i'])).toEqual(['广告', '/x/i']);
+    expect(toStorageKeywordEntries([{ value: '广告', scopes: ['home'] }])).toEqual([
+      { value: '广告', scopes: ['home'] },
+    ]);
   });
 
   test('往返一致', () => {
-    const runtime = toRuntimeValue(['/a,b/gi', '普通'], 'keywordArray');
-    const storage = toStorageValue(runtime);
-    expect(storage).toEqual(['/a,b/gi', '普通']);
+    const storage = [{ value: '/a,b/gi', scopes: ['search'] }, { value: '普通', scopes: ['global'] }];
+    expect(toStorageKeywordEntries(toRuntimeKeywordEntries(storage))).toEqual(storage);
   });
 
   test('非数组输入返回空数组', () => {
-    expect(toStorageValue(undefined)).toEqual([]);
+    expect(toStorageKeywordEntries(undefined)).toEqual([]);
   });
 });
