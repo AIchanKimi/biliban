@@ -1,6 +1,6 @@
 // 样式：
-//   LIB_STYLE   —— Block_Obj v3.0.3 BLOCK_STYLE 逐字移植（GPL-3.0+ 兼容）
-//   BASIC_STYLE —— target.js 107–130 逐字（全屏播放器 z-index 覆盖 + 注入按钮样式）
+//   LIB_STYLE   —— 面板/触发器/chip 基础样式（源自 Block_Obj v3.0.3，GPL-3.0+ 兼容；v5 增补新控件）
+//   BASIC_STYLE —— 全屏播放器 z-index 覆盖（target.js 107–130 残留必要项）
 
 export const LIB_STYLE = `
   .block_obj_wrap_div {
@@ -74,13 +74,6 @@ export const LIB_STYLE = `
     color: #FFB86C;
     margin-top: 5px;
   }
-  .block_obj_separator_symbol {
-    background-color: #303030;
-    height: 2px;
-    margin-bottom: 5px;
-    margin-top: 5px;
-    min-width: 400px;
-  }
   .block_obj_input_div {
     margin-top: 5px;
   }
@@ -95,7 +88,18 @@ export const LIB_STYLE = `
     padding-left: 4px;
   }
   .block_obj_keyword_input {
-    width: 220px;
+    width: 190px;
+  }
+  .block_obj_number_input {
+    width: 60px;
+  }
+  .block_obj_select {
+    background-color: #C0C0C0;
+    border: 1px solid #C0C0C0;
+    color: #000;
+    font-size: 13px;
+    margin-left: 5px;
+    vertical-align: bottom;
   }
   .block_obj_input_btn {
     background-color: #3da9cc;
@@ -151,15 +155,40 @@ export const LIB_STYLE = `
   .block_obj_child_green {
     color: #41B349;
   }
+  .block_obj_child_badge {
+    background-color: #00A1D6;
+    border-radius: 3px;
+    color: #FFF;
+    font-size: 11px;
+    margin-left: 4px;
+    padding: 0 4px;
+  }
+  .block_obj_child_badge_temp {
+    background-color: #FFB86C;
+    color: #000;
+  }
   .block_obj_child_del {
     color: #A9181C;
     cursor: pointer;
+    margin-left: 4px;
   }
   .block_obj_list_textarea_expand {
     max-height: 720px;
   }
   .block_obj_li_hide {
     display: none;
+  }
+  .block_obj_rule_row {
+    border: 1px dotted #555;
+    border-radius: 3px;
+    margin-top: 4px;
+    padding: 4px;
+  }
+  .block_obj_rule_row .block_obj_input {
+    width: 150px;
+  }
+  .block_obj_rule_more {
+    margin-top: 4px;
   }
   .block_obj_button {
     background-color: #FB7299;
@@ -223,83 +252,6 @@ export const LIB_STYLE = `
   .block_obj_hidden {
     visibility: hidden !important;
   }
-  .block_obj_presentation_div {
-    display: flex;
-    position: fixed;
-    background-color: rgba(0, 0, 0, .5);
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 100000;
-    align-items: center;
-    justify-content: center;
-  }
-  .block_obj_dialog_div {
-    position: relative;
-    width: 400px;
-    background-color: #4e5654;
-    border: 0 solid #000;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-  }
-  .block_obj_big_bang_top_part {
-    margin-top: 5px;
-    margin-bottom: 5px;
-  }
-  .block_obj_big_bang_h3 {
-    font-size: 20px;
-    color: #fff;
-    margin-left: 5px;
-    background-color: #4e5654;
-    border-color: #4e5654;
-  }
-  .block_obj_big_bang_deselect_btn {
-    float: right;
-    margin-top: 5px;
-    margin-right: 5px;
-    color: #2a2a92;
-    cursor: pointer;
-  }
-  .block_obj_big_bang_middle_part {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    max-height: 500px;
-    overflow-y: auto;
-  }
-  .block_obj_big_bang_text {
-    background-color: #3e3939;
-    color: #fff;
-    padding: 5px;
-    margin: 4px;
-    font-size: 16px;
-    display: inline-block;
-    border-radius: 99px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .block_obj_big_bang_text_selected {
-    background-color: #3636b1 !important;
-  }
-  .block_obj_big_bang_bottom_part {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    text-align: center;
-  }
-  .block_obj_big_bang_add_btn, .block_obj_big_bang_copy_btn {
-    display: inline-block;
-    padding: 10px;
-    color: #fff;
-    background-color: #325561;
-    cursor: pointer;
-    border-radius: 99px;
-    margin-left: 20px;
-    margin-right: 20px;
-  }
-  .block_obj_big_bang_add_btn:hover, .block_obj_big_bang_copy_btn:hover {
-    color: #2a2a92;
-  }
 `;
 
 export const BASIC_STYLE = `
@@ -309,27 +261,11 @@ export const BASIC_STYLE = `
       .player-module {
           z-index: 100001 !important;
       }
-      .bilibili_reply_bang_button,
-      .bilibili_comment_bang_button,
-      .bilibili_reply_user_block_button,
-      .bilibili_comment_user_block_button {
-          display: inline-block;
-          padding-left: 5px;
-          border-radius: 4px;
-          cursor: pointer;
-      }
-      .bilibili_reply_bang_button:hover,
-      .bilibili_comment_bang_button:hover,
-      .bilibili_reply_user_block_button:hover,
-      .bilibili_comment_user_block_button:hover {
-          color: #ec6490;
-/*           background-color: #e5e9ef; */
-      }
   `;
 
 let injected = false;
 
-/** 注入样式（幂等；对等 Block_Obj init：追加到 <body>） */
+/** 注入样式（幂等：追加到 <body>） */
 export function injectStyles() {
   if (injected || !document.body) {
     return;

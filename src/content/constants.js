@@ -88,6 +88,16 @@ export const BIG_BANG_BOTTOM_CLASS = 'block_obj_big_bang_bottom_part';
 export const BIG_BANG_ADD_CLASS = 'block_obj_big_bang_add_btn';
 export const BIG_BANG_COPY_CLASS = 'block_obj_big_bang_copy_btn';
 
+// v5 面板新控件类名
+export const SELECT_CLASS = 'block_obj_select';
+export const NUMBER_INPUT_CLASS = 'block_obj_input block_obj_number_input';
+export const CHIP_BADGE_CLASS = 'block_obj_child_badge';
+export const CHIP_TEMP_BADGE_CLASS = 'block_obj_child_badge block_obj_child_badge_temp';
+export const RULE_ROW_CLASS = 'block_obj_rule_row';
+export const RULE_MORE_CLASS = 'block_obj_rule_more';
+export const LI_USERNAME_CLASS = 'block_obj_li_username';
+export const LI_KEYWORD_CLASS = 'block_obj_li_keyword';
+
 // 时序（毫秒）
 export const INTERVAL_TIME = 100; // resolver 请求节流基数
 export const SAVE_FLASH_MS = 1000; // 「已保存」文本闪烁

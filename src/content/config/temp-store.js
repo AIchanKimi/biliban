@@ -48,6 +48,36 @@ export function clearTempEntries() {
 }
 
 /**
+ * 按类型清空（面板「清空临时词」按组作用）。
+ * @param {'keyword' | 'username'} type
+ */
+export function removeTempEntriesByType(type) {
+  tempEntries = tempEntries.filter(entry => entry.type !== type);
+}
+
+/**
+ * 整体替换（面板保存时以 DOM 收集结果为准）。非法项同样被过滤。
+ * @param {ReadonlyArray<{ value: unknown, type: unknown, scopes?: unknown }>} items
+ */
+export function setTempEntries(items) {
+  clearTempEntries();
+  addTempEntries(items);
+}
+
+/**
+ * 运行时配置 + 临时词条合并（每次 getConfig 调用时现算，temp-store 恒为最新）。
+ * @param {Readonly<Record<string, unknown>>} runtimeConfig
+ * @returns {Readonly<Record<string, unknown>>}
+ */
+export function mergeTempEntries(runtimeConfig) {
+  return {
+    ...runtimeConfig,
+    usernames: getEffectiveEntries(runtimeConfig.usernames, 'username'),
+    keywords: getEffectiveEntries(runtimeConfig.keywords, 'keyword'),
+  };
+}
+
+/**
  * 持久词条 + 指定类型的临时词条合并（临时排后；同值同作用域持久优先去重）。
  * @param {ReadonlyArray<{ value: unknown, scopes: ReadonlyArray<string> }>} persistentEntries
  * @param {'keyword' | 'username'} type
