@@ -82,12 +82,18 @@ export const LIB_STYLE = `
     clip: rect(0, 0, 0, 0);
     position: absolute;
   }
+  .block_obj_footer_switch {
+    align-items: center;
+    display: inline-flex;
+  }
   .block_obj_switch {
     align-items: center;
     color: var(--bo-text-secondary);
     cursor: pointer;
     display: inline-flex;
     gap: 6px;
+    /* 与轨道同高，滑块 top:50% 即轨道中线（v6.7.1 居中修复） */
+    height: 16px;
     position: relative;
     user-select: none;
   }
@@ -503,8 +509,9 @@ export const LIB_STYLE = `
   }
   .block_obj_footer_secondary,
   .block_obj_footer_primary {
+    align-items: center;
     display: flex;
-    gap: 6px;
+    gap: 8px;
   }
   .block_obj_footer_row .block_obj_button {
     margin-top: 0;

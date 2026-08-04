@@ -170,12 +170,13 @@ export function createPanel(deps) {
     footerLi.className = 'block_obj_footer_row';
     const secondary = document.createElement('span');
     secondary.className = 'block_obj_footer_secondary';
-    secondary.appendChild(generalSection.el);
     secondary.appendChild(exportButton);
     secondary.appendChild(importButton);
     secondary.appendChild(importFileInput);
     const primary = document.createElement('span');
     primary.className = 'block_obj_footer_primary';
+    // v6.7.1：总开关 toggle 置于「保存」左侧
+    primary.appendChild(generalSection.el);
     primary.appendChild(saveButton);
     primary.appendChild(closeButton);
     footerLi.appendChild(secondary);

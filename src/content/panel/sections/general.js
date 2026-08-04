@@ -9,6 +9,7 @@ const ENABLE_ID = FIELD_ID_PREFIX + 'enable';
  */
 export function createGeneralSection(config) {
   const wrap = document.createElement('span');
+  wrap.className = 'block_obj_footer_switch';
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.id = ENABLE_ID;
