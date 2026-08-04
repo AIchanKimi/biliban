@@ -4,8 +4,6 @@ import { FIELD_ID_PREFIX, SCOPE_PANE_CLASS, UL_NODE_CLASS, LIST_DIV_CLASS, LI_WO
 import { createEntriesGroup } from './entries.js';
 import { createDurationsGroup } from './durations.js';
 import { createRulesGroup } from './rules.js';
-import { buttonClicked, createSpanBtn } from '../input-row.js';
-import { removeTempChips } from '../chips.js';
 
 /**
  * @param {{
@@ -15,7 +13,6 @@ import { removeTempChips } from '../chips.js';
  *   durations: ReadonlyArray<{ op: string, seconds: number, scopes: string[] }>,
  *   tempDurations: ReadonlyArray<{ op: string, seconds: number, scopes: string[] }>,
  *   rules: ReadonlyArray<Record<string, unknown>>,
- *   onTempCleared: () => void,
  * }} params
  * @returns {{
  *   el: HTMLElement,
@@ -23,7 +20,7 @@ import { removeTempChips } from '../chips.js';
  * }}
  */
 export function createScopePane(params) {
-  const { scope, words, tempWords, durations, tempDurations, rules, onTempCleared } = params;
+  const { scope, words, tempWords, durations, tempDurations, rules } = params;
   // 「全局」面板管理屏蔽词 + 时长词条；规则归各具体分类
   const rulesAllowed = scope !== 'global';
 
@@ -63,20 +60,8 @@ export function createScopePane(params) {
     extraLis.push(rulesLi);
   }
 
-  const clearTempLi = document.createElement('li');
-  const clearTempDiv = document.createElement('div');
-  clearTempDiv.className = LIST_DIV_CLASS;
-  const clearTempBtn = createSpanBtn('清空临时词', '立即清空本分类下的全部临时词条（仅本标签页）', () => {
-    for (const listEl of pane.querySelectorAll('.block_obj_list_textarea_div')) {
-      removeTempChips(listEl);
-    }
-    onTempCleared();
-    buttonClicked(clearTempBtn, '已清空');
-  });
-  clearTempDiv.appendChild(clearTempBtn);
-  clearTempLi.appendChild(clearTempDiv);
-
-  for (const li of [...wordsGroup.lis, ...extraLis, clearTempLi]) {
+  // v6.4：「清空临时词」上收至面板底部工具行（作用于当前分类），分节内不再单独成行
+  for (const li of [...wordsGroup.lis, ...extraLis]) {
     innerUl.appendChild(li);
   }
 

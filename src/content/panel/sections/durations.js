@@ -3,10 +3,8 @@
 import {
   FIELD_ID_PREFIX,
   INPUT_DIV_CLASS,
-  INPUT_SPAN_CLASS,
   SELECT_CLASS,
   NUMBER_INPUT_CLASS,
-  SEPARATOR_LI_CLASS,
   SEPARATOR_TEXT_CLASS,
   LIST_DIV_CLASS,
   LIST_TEXTAREA_DIV_CLASS,
@@ -21,17 +19,6 @@ export function durationLabel(entry) {
   const s = entry.seconds;
   const text = s < 60 || s % 60 !== 0 ? `${s} 秒` : `${s / 60} 分钟`;
   return (entry.op === 'lt' ? '短于 ' : '长于 ') + text;
-}
-
-function separatorLi(label, title) {
-  const li = document.createElement('li');
-  li.className = SEPARATOR_LI_CLASS;
-  const text = document.createElement('span');
-  text.className = SEPARATOR_TEXT_CLASS;
-  text.textContent = label;
-  text.title = title;
-  li.appendChild(text);
-  return li;
 }
 
 /** chip 根节点 → 时长词条（读 dataset，不依赖文本真值） */
@@ -96,9 +83,6 @@ export function createDurationsGroup(params) {
   const inputLi = document.createElement('li');
   const inputDiv = document.createElement('div');
   inputDiv.className = INPUT_DIV_CLASS;
-  const inputSpan = document.createElement('span');
-  inputSpan.className = INPUT_SPAN_CLASS;
-  inputSpan.textContent = '时长：';
 
   const opSelect = document.createElement('select');
   opSelect.id = opId;
@@ -228,7 +212,6 @@ export function createDurationsGroup(params) {
     buttonClicked(clearBtn, '清除成功');
   });
 
-  inputDiv.appendChild(inputSpan);
   inputDiv.appendChild(opSelect);
   inputDiv.appendChild(secondsInput);
   inputDiv.appendChild(previewSpan);
@@ -236,8 +219,6 @@ export function createDurationsGroup(params) {
   inputDiv.appendChild(tempLabel);
   inputDiv.appendChild(tempHoursSelect);
   inputDiv.appendChild(addBtn);
-  inputDiv.appendChild(deleteBtn);
-  inputDiv.appendChild(clearBtn);
   inputLi.appendChild(inputDiv);
 
   const listLi = document.createElement('li');
@@ -246,12 +227,25 @@ export function createDurationsGroup(params) {
   listDiv.appendChild(listEl);
   listLi.appendChild(listDiv);
 
+  // ---- 分节头（v6.4：标题居左、列表操作居右）----
+  const headerLi = document.createElement('li');
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'block_obj_section_header';
+  const sectionLabel = document.createElement('span');
+  sectionLabel.className = SEPARATOR_TEXT_CLASS;
+  sectionLabel.textContent = '时长按蔽';
+  sectionLabel.title = '卡片内出现 1:23 / 1:02:03 形式的时长且满足任一词条时屏蔽';
+  const actions = document.createElement('span');
+  actions.className = 'block_obj_section_actions';
+  actions.appendChild(deleteBtn);
+  actions.appendChild(clearBtn);
+  headerDiv.appendChild(sectionLabel);
+  headerDiv.appendChild(actions);
+  headerLi.appendChild(headerDiv);
+
   function collect() {
     return extractDurationsFromEl(listEl);
   }
 
-  return {
-    lis: [separatorLi('时长按蔽（卡片需带时长文本）：', '卡片内出现 1:23 / 1:02:03 形式的时长且满足任一词条时屏蔽'), inputLi, listLi],
-    collect,
-  };
+  return { lis: [headerLi, inputLi, listLi], collect };
 }

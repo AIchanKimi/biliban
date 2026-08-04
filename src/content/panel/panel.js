@@ -30,9 +30,11 @@ import { getTempEntries, setTempEntries, removeTempEntriesByScope } from '../con
 import { normalize } from '../config/store.js';
 import { getRuleStats } from '../engine/rule-stats.js';
 import { categoryFor } from '../engine/category.js';
-import { RULE_STATS_CLASS, RULE_STATS_HIT_CLASS, TAB_CURRENT_CLASS } from '../constants.js';
+import { LIST_TEXTAREA_DIV_CLASS, RULE_STATS_CLASS, RULE_STATS_HIT_CLASS, TAB_CURRENT_CLASS } from '../constants.js';
 import { createGeneralSection } from './sections/general.js';
 import { createScopePane } from './sections/scope-pane.js';
+import { removeTempChips } from './chips.js';
+import { buttonClicked } from './input-row.js';
 import { SAVE_FLASH_TEXT } from './panel-text.js';
 
 const STATS_REFRESH_MS = 1000;
@@ -53,6 +55,7 @@ export function createPanel(deps) {
   let generalSection = null;
   let panes = [];
   let tabButtons = [];
+  let clearTempBtnRef = null;
   let activeScope = 'global';
   let saveTimer = null;
   let cancelTimer = null;
@@ -133,17 +136,13 @@ export function createPanel(deps) {
         durations: entriesByScope(config.durations, scope),
         tempDurations: tempDurationsByScope(scope),
         rules: config.rules,
-        onTempCleared: () => {
-          removeTempEntriesByScope(scope);
-          onTempCleared();
-        },
       });
       pane.el.style.display = scope === activeScope ? '' : 'none';
       ulNode.appendChild(pane.el);
       return { scope, pane };
     });
 
-    // ---- 底部三按钮 ----
+    // ---- 底部单行页脚（v6.4）：左 导出/导入/清空临时词，右 取消/仅保存/保存并关闭 ----
     const saveButton = createFooterBtn(SAVE_BUTTON_CLASS, '保存并关闭', '保存设置并关闭设置窗口', () => {
       toggle();
       save(saveButton);
@@ -177,16 +176,45 @@ export function createPanel(deps) {
       }, CANCEL_REBUILD_MS);
       e.stopPropagation();
     });
-    ulNode.appendChild(saveButton);
-    ulNode.appendChild(onlySaveButton);
-    ulNode.appendChild(cancelButton);
-    const toolsLi = document.createElement('li');
-    toolsLi.className = 'block_obj_tools_row';
-    toolsLi.appendChild(exportButton);
-    toolsLi.appendChild(importButton);
-    toolsLi.appendChild(importFileInput);
-    ulNode.appendChild(toolsLi);
+    const clearTempButton = createFooterBtn(TOOLS_BUTTON_CLASS, '清空临时词', '', () => {
+      const paneEl = panes.find(p => p.scope === activeScope)?.pane.el;
+      for (const listEl of paneEl?.querySelectorAll('.' + LIST_TEXTAREA_DIV_CLASS) ?? []) {
+        removeTempChips(listEl);
+      }
+      removeTempEntriesByScope(activeScope);
+      onTempCleared();
+      buttonClicked(clearTempButton, '已清空');
+    });
+
+    const footerLi = document.createElement('li');
+    footerLi.className = 'block_obj_footer_row';
+    const secondary = document.createElement('span');
+    secondary.className = 'block_obj_footer_secondary';
+    secondary.appendChild(exportButton);
+    secondary.appendChild(importButton);
+    secondary.appendChild(clearTempButton);
+    secondary.appendChild(importFileInput);
+    const primary = document.createElement('span');
+    primary.className = 'block_obj_footer_primary';
+    primary.appendChild(cancelButton);
+    primary.appendChild(onlySaveButton);
+    primary.appendChild(saveButton);
+    footerLi.appendChild(secondary);
+    footerLi.appendChild(primary);
+    ulNode.appendChild(footerLi);
+
+    clearTempBtnRef = clearTempButton;
+    updateClearTempTitle();
     document.body.appendChild(wrapDiv);
+  }
+
+  /** 「清空临时词」作用于当前分类，title 随标签切换更新 */
+  function updateClearTempTitle() {
+    if (!clearTempBtnRef) {
+      return;
+    }
+    const label = SCOPES.find(s => s.value === activeScope)?.label ?? activeScope;
+    clearTempBtnRef.title = '立即清空「' + label + '」分类下的全部临时词条';
   }
 
   /** 全量导出为 JSON 文件下载（v6.1 起规则已含全部内置项，config 即全量） */
@@ -236,6 +264,7 @@ export function createPanel(deps) {
     for (const { scope: s, pane } of panes) {
       pane.el.style.display = s === scope ? '' : 'none';
     }
+    updateClearTempTitle();
   }
 
   function createFooterBtn(classname, label, title, callback) {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "哔哩哔哩 - 屏蔽指定内容",
-  "version": "6.3.0",
+  "version": "6.4.0",
   "description": "按屏蔽词（关键字/正则，纯文字匹配）屏蔽 bilibili 视频卡片，支持页面作用域（搜索/空间/播放/收藏）、过期式临时屏蔽、时长按蔽与可编辑的选择器规则；多标签页同步。",
   "permissions": ["storage"],
   "host_permissions": ["*://*.bilibili.com/*", "https://api.bilibili.com/*"],

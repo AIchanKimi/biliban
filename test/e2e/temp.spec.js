@@ -107,7 +107,8 @@ test.describe('临时屏蔽（过期制，默认 24 小时）', () => {
       .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(true);
 
-    await page.locator('#bilibiliConfig_pane_search').getByText('清空临时词', { exact: true }).click();
+    // v6.4：「清空临时词」上收至页脚，作用于当前分类标签
+    await page.locator(WRAP).getByText('清空临时词', { exact: true }).click();
     await expect
       .poll(() => page.locator('[data-test="search-card-ad"]').evaluate(el => el.classList.contains('block_obj_none')))
       .toBe(false);

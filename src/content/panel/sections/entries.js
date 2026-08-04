@@ -4,10 +4,8 @@
 import {
   FIELD_ID_PREFIX,
   INPUT_DIV_CLASS,
-  INPUT_SPAN_CLASS,
   INPUT_CLASS,
   SELECT_CLASS,
-  SEPARATOR_LI_CLASS,
   SEPARATOR_TEXT_CLASS,
   LIST_DIV_CLASS,
   LIST_TEXTAREA_DIV_CLASS,
@@ -37,19 +35,6 @@ export function isValidNewEntry(value) {
   return true;
 }
 
-function separatorLi(label, title = '') {
-  const li = document.createElement('li');
-  li.className = SEPARATOR_LI_CLASS;
-  const text = document.createElement('span');
-  text.className = SEPARATOR_TEXT_CLASS;
-  text.textContent = label;
-  if (title) {
-    text.title = title;
-  }
-  li.appendChild(text);
-  return li;
-}
-
 /**
  * @param {{
  *   scope: string,
@@ -65,21 +50,17 @@ export function createEntriesGroup(params) {
   const tempId = `${FIELD_ID_PREFIX}wordTemp_${scope}`;
   const listId = `${FIELD_ID_PREFIX}words_${scope}`;
 
-  // ---- 输入行 ----
+  // ---- 输入行（v6.4：输入框弹性占满整行，无前缀文案）----
   const inputLi = document.createElement('li');
   inputLi.className = liClassname;
   const inputDiv = document.createElement('div');
   inputDiv.className = INPUT_DIV_CLASS;
-  const inputSpan = document.createElement('span');
-  inputSpan.className = INPUT_SPAN_CLASS;
-  inputSpan.textContent = '输入：';
   const input = document.createElement('input');
   input.type = 'text';
   input.id = inputId;
   input.className = INPUT_CLASS;
-  input.placeholder = ' 多个以半角逗号分隔；正则格式 /Pattern/Modifier ';
+  input.placeholder = '添加屏蔽词，多个以半角逗号分隔；正则 /Pattern/Modifier';
   input.title = '标题包含匹配；UP主名精确匹配；/正则/ 两者都匹配';
-  inputSpan.appendChild(input);
 
   const tempCheckbox = document.createElement('input');
   tempCheckbox.type = 'checkbox';
@@ -174,15 +155,11 @@ export function createEntriesGroup(params) {
     }
   });
 
-  inputDiv.appendChild(inputSpan);
+  inputDiv.appendChild(input);
   inputDiv.appendChild(tempCheckbox);
   inputDiv.appendChild(tempLabel);
   inputDiv.appendChild(tempHoursSelect);
   inputDiv.appendChild(addBtn);
-  inputDiv.appendChild(deleteBtn);
-  inputDiv.appendChild(clearBtn);
-  inputDiv.appendChild(copyBtn);
-  inputDiv.appendChild(expandBtn);
   inputLi.appendChild(inputDiv);
 
   // ---- 列表行 ----
@@ -193,11 +170,28 @@ export function createEntriesGroup(params) {
   listDiv.appendChild(listEl);
   listLi.appendChild(listDiv);
 
+  // ---- 分节头（v6.4：标题居左、列表操作居右，替代旧黄色分隔行）----
+  const headerLi = document.createElement('li');
+  headerLi.className = liClassname;
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'block_obj_section_header';
+  const sectionLabel = document.createElement('span');
+  sectionLabel.className = SEPARATOR_TEXT_CLASS;
+  sectionLabel.textContent = '屏蔽词';
+  sectionLabel.title = '标题包含匹配；UP主名精确匹配；/正则/ 两者都匹配';
+  const actions = document.createElement('span');
+  actions.className = 'block_obj_section_actions';
+  actions.appendChild(deleteBtn);
+  actions.appendChild(clearBtn);
+  actions.appendChild(copyBtn);
+  actions.appendChild(expandBtn);
+  headerDiv.appendChild(sectionLabel);
+  headerDiv.appendChild(actions);
+  headerLi.appendChild(headerDiv);
+
   function collect() {
     return extractEntriesFromEl(listEl);
   }
 
-  const sectionLabel = '屏蔽词：';
-  const sectionTitle = '标题包含匹配；UP主名精确匹配；/正则/ 两者都匹配';
-  return { lis: [separatorLi(sectionLabel, sectionTitle), inputLi, listLi], collect };
+  return { lis: [headerLi, inputLi, listLi], collect };
 }

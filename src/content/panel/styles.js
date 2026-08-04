@@ -104,6 +104,31 @@ export const LIB_STYLE = `
     font-weight: 600;
     margin-top: 10px;
   }
+  /* v6.4 分节头：标题居左、列表操作居右 */
+  .block_obj_section_header {
+    align-items: center;
+    display: flex;
+    gap: 6px;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+  .block_obj_section_header .block_obj_separator_text {
+    margin-top: 0;
+  }
+  .block_obj_section_actions {
+    display: flex;
+    gap: 2px;
+  }
+  .block_obj_section_actions .block_obj_input_btn {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--bo-text-muted);
+    padding: 1px 6px;
+  }
+  .block_obj_section_actions .block_obj_input_btn:hover {
+    background-color: var(--bo-bg-muted);
+    color: var(--bo-text);
+  }
   .block_obj_input_div {
     display: flex;
     flex-wrap: wrap;
@@ -129,8 +154,11 @@ export const LIB_STYLE = `
     box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.06);
     outline: none;
   }
-  .block_obj_keyword_input {
-    width: 200px;
+  /* 输入行内弹性占满（v6.4） */
+  .block_obj_input_div .block_obj_keyword_input {
+    flex: 1 1 160px;
+    min-width: 0;
+    width: auto;
   }
   .block_obj_number_input {
     width: 70px;
@@ -180,6 +208,10 @@ export const LIB_STYLE = `
     min-height: 3px;
     overflow: auto;
     padding: 2px;
+  }
+  /* 空列表不占位（v6.4） */
+  .block_obj_list_textarea_div:empty {
+    display: none;
   }
   .block_obj_list_textarea_div::-webkit-scrollbar,
   .block_obj_scope_pane::-webkit-scrollbar {
@@ -424,6 +456,7 @@ export const LIB_STYLE = `
     position: relative;
     min-height: 1em;
     user-select: none;
+    white-space: nowrap;
   }
   .block_obj_button:hover {
     background-color: var(--bo-bg-muted);
@@ -432,26 +465,29 @@ export const LIB_STYLE = `
     background-color: var(--bo-primary);
     border-color: var(--bo-primary);
     color: #FFF;
-    float: right;
-    margin-right: 2px;
   }
   .block_obj_save_button:hover {
     background-color: var(--bo-primary-hover);
   }
-  .block_obj_cancel_button {
-    float: left;
-    margin-left: 2px;
-  }
-  .block_obj_tools_row {
+  /* v6.4 单行页脚：左工具组 / 右主操作组 */
+  .block_obj_footer_row {
+    align-items: center;
     display: flex;
-    justify-content: center;
-    gap: 10px;
-    clear: both;
-    margin-top: 8px;
+    gap: 8px;
+    justify-content: space-between;
+    margin-top: 14px;
+  }
+  .block_obj_footer_secondary,
+  .block_obj_footer_primary {
+    display: flex;
+    gap: 6px;
+  }
+  .block_obj_footer_row .block_obj_button {
+    margin-top: 0;
+    padding: 5px 10px;
   }
   .block_obj_tools_button {
     color: var(--bo-text-secondary);
-    margin-top: 0;
   }
   .block_obj_expand_box {
     bottom: 0;
