@@ -13,7 +13,7 @@ describe('stringToArray', () => {
   });
 
   test('正则内转义斜杠不提前闭合', () => {
-    expect(stringToArray('/a\\/b,c')).toEqual(['/a\\/b', 'c']);
+    expect(stringToArray('/a\\/b/,c')).toEqual(['/a\\/b/', 'c']);
   });
 
   test('普通文本按逗号拆分', () => {

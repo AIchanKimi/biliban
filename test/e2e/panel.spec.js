@@ -197,8 +197,8 @@ test.describe('设置面板 v2（标签页式管理）', () => {
       .click();
     const chips = page.locator('#bilibiliConfig_words_global .block_obj_child_text');
     await expect(chips).toHaveCount(2);
-    // prepend 插入：后添加的视觉在前
-    await expect(chips.nth(0)).toHaveText('/^YY的奇妙冒险$/');
+    // prepend 插入：后添加的视觉在前；>9 字符显示截断，title 存全值
+    await expect(chips.nth(0)).toHaveAttribute('title', '/^YY的奇妙冒险$/');
     await expect(chips.nth(1)).toHaveText('/^陈莴笋哦$/');
     await expect(chips.nth(0)).toHaveClass(/block_obj_child_green/);
     await page.close();
