@@ -1,47 +1,45 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { recordRuleFound, recordRuleHidden, getRuleStats, clearRuleStats } from '../../src/content/engine/rule-stats.js';
+import { setRuleStats, getRuleStats, clearRuleStats } from '../../src/content/engine/rule-stats.js';
 
-describe('rule-stats（规则命中统计）', () => {
+describe('rule-stats（规则命中统计，按轮覆盖写）', () => {
   beforeEach(() => clearRuleStats());
 
-  test('found/hidden 累加', () => {
-    recordRuleFound('r1', 3);
-    recordRuleFound('r1', 2);
-    recordRuleHidden('r1');
-    recordRuleHidden('r1', 2);
-    expect(getRuleStats()).toEqual({ r1: { found: 5, hidden: 3 } });
+  test('覆盖写：后一轮替换前一轮（不累加）', () => {
+    setRuleStats('r1', 100, 10);
+    setRuleStats('r1', 6, 2);
+    expect(getRuleStats()).toEqual({ r1: { found: 6, hidden: 2 } });
   });
 
-  test('多规则独立计数', () => {
-    recordRuleFound('r1', 1);
-    recordRuleFound('r2', 4);
+  test('多规则独立记录', () => {
+    setRuleStats('r1', 1, 0);
+    setRuleStats('r2', 4, 3);
     expect(getRuleStats()).toEqual({
       r1: { found: 1, hidden: 0 },
-      r2: { found: 4, hidden: 0 },
+      r2: { found: 4, hidden: 3 },
     });
   });
 
-  test('hidden 先于 found 也成立（resolver 异步路径）', () => {
-    recordRuleHidden('bv-rule');
-    expect(getRuleStats()).toEqual({ 'bv-rule': { found: 0, hidden: 1 } });
+  test('稳定页面：重复相同轮次数字不变（修复累加漂移）', () => {
+    for (let round = 0; round < 50; round++) {
+      setRuleStats('r1', 6, 2);
+    }
+    expect(getRuleStats().r1).toEqual({ found: 6, hidden: 2 });
   });
 
-  test('非法入参忽略（空 id / 非正计数）', () => {
-    recordRuleFound('', 5);
-    recordRuleFound(null, 5);
-    recordRuleFound('r1', 0);
-    recordRuleHidden('r1', -1);
-    expect(getRuleStats()).toEqual({});
+  test('负数收敛为 0，空 id 忽略', () => {
+    setRuleStats('r1', -5, -1);
+    setRuleStats('', 9, 9);
+    expect(getRuleStats()).toEqual({ r1: { found: 0, hidden: 0 } });
   });
 
   test('getRuleStats 返回副本（外部修改不影响内部）', () => {
-    recordRuleFound('r1', 1);
+    setRuleStats('r1', 1, 1);
     getRuleStats().r1.found = 999;
     expect(getRuleStats().r1.found).toBe(1);
   });
 
-  test('clearRuleStats 清零（页面刷新语义由模块级状态天然提供）', () => {
-    recordRuleFound('r1', 1);
+  test('clearRuleStats 清零', () => {
+    setRuleStats('r1', 1, 1);
     clearRuleStats();
     expect(getRuleStats()).toEqual({});
   });

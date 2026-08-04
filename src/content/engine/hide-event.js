@@ -2,10 +2,11 @@
 // 实时页面分类 → 内置 + 自定义规则统一循环：
 //   mode:'hide'  直接隐藏（禁用时解除）；resolve:'bv' 走异步查询；
 //   mode:'match' 提取用户名/标题 → hideHandler（屏蔽词 + 时长词条）。
-// 每轮记录命中统计（rule-stats）：选择器找到几个元素、最终隐藏几个。
+// 命中统计（rule-stats）按轮覆盖写：每条规则记录本轮「匹配到几个 / 屏蔽了几个」，
+// 面板徽标因此反映当前页面状态，稳定不累加。
 import { BUILTIN_RULES } from '../rules/builtin-rules.js';
 import { categoryFor } from './category.js';
-import { recordRuleFound, recordRuleHidden as recordRuleHiddenDirect } from './rule-stats.js';
+import { setRuleStats } from './rule-stats.js';
 import { scopesApply } from '../config/scopes.js';
 import { extractEle } from '../dom/extract-ele.js';
 import { getBvNumber } from '../dom/bv.js';
@@ -14,8 +15,8 @@ import { hideOperation } from '../dom/hide-operation.js';
 /**
  * @param {{
  *   getConfig: () => Readonly<Record<string, unknown>>,  // 运行时有效配置（含临时词条与自定义规则）
- *   hideHandler: (itemNode, username, textValue, method?, ruleId?) => void,
- *   resolveUsername: (bvNum, ele, textEle, ruleId?) => void,
+ *   hideHandler: (itemNode, username, textValue, method?) => boolean,
+ *   resolveUsername: (bvNum, ele, textEle) => boolean | null,  // 同步命中返回 hideStatus；异步查询中返回 null
  *   homeExtra: { run: () => void },
  * }} deps
  * @returns {() => void}
@@ -46,20 +47,23 @@ export function createHideEvent(deps) {
         console.error('[bilibili_block] 选择器执行失败: ', rule.selector, e);
         continue;
       }
-      recordRuleFound(rule.id, all.length);
+      let hiddenCount = 0;
       for (const ele of all) {
         try {
           if (rule.mode === 'hide') {
             hideOperation(ele, enabled, rule.method ?? 0);
             if (enabled) {
-              recordRuleHiddenDirect(rule.id);
+              hiddenCount++;
             }
             continue;
           }
           if (rule.resolve === 'bv') {
             const link = rule.bvSelector ? ele.querySelector(rule.bvSelector) : null;
             if (link) {
-              resolveUsername(getBvNumber(link.href), ele, extractEle(ele, rule.titleSelector), rule.id);
+              const status = resolveUsername(getBvNumber(link.href), ele, extractEle(ele, rule.titleSelector));
+              if (status === true) {
+                hiddenCount++;
+              }
             }
             continue;
           }
@@ -71,11 +75,14 @@ export function createHideEvent(deps) {
             }
           }
           const titleEl = rule.titleSelector ? extractEle(ele, rule.titleSelector) : null;
-          hideHandler(ele, username, titleEl, rule.method ?? 0, rule.id);
+          if (hideHandler(ele, username, titleEl, rule.method ?? 0)) {
+            hiddenCount++;
+          }
         } catch (e) {
           console.error('[bilibili_block] 元素处理失败: ', rule.selector, e);
         }
       }
+      setRuleStats(rule.id, all.length, hiddenCount);
     }
     if (category === 'home' || category === 'video') {
       homeExtra.run();

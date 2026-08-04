@@ -132,6 +132,12 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     const statsBadge = page.locator('#bilibiliConfig_pane_home .block_obj_rule_stats[data-rule-id="builtin-video-card-common"]');
     await expect(statsBadge).toHaveText(/找到 \d+ · 隐藏 \d+/);
     await expect(statsBadge).toHaveClass(/block_obj_rule_stats_hit/);
+
+    // 回归防护：统计按轮覆盖写，静态页面上数字不得持续增长（旧版累加 bug）
+    const first = await statsBadge.textContent();
+    await page.waitForTimeout(1500);
+    const second = await statsBadge.textContent();
+    expect(second).toBe(first);
     await page.close();
   });
 

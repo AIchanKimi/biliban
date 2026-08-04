@@ -1,19 +1,18 @@
 // hideHandler —— 单卡片判定与隐藏执行（v5.2）。
-// 契约 (itemNode, username, textValue, method, ruleId)：resolver 与首页特殊逻辑依赖。
+// 契约 (itemNode, username, textValue, method)：resolver 与首页特殊逻辑依赖。
 // 判定：enable 门控 → 屏蔽词 decide → 时长词条兜底 → hideOperation（false 时解除）。
-// ruleId 用于命中统计（rule-stats，面板高亮）。
+// 返回 hideStatus，供 hide-event 按轮统计命中数。
 import { decide } from './decide.js';
 import { categoryFor } from './category.js';
 import { findDurationSeconds, decideDurationEntries } from './duration.js';
-import { recordRuleHidden } from './rule-stats.js';
 import { hideOperation } from '../dom/hide-operation.js';
 
 /**
  * @param {{ getConfig: () => Readonly<Record<string, unknown>> }} deps
- * @returns {(itemNode, username, textValue, method?: number, ruleId?: string | null) => void}
+ * @returns {(itemNode, username, textValue, method?: number) => boolean}
  */
 export function createHideHandler(deps) {
-  return function hideHandler(itemNode, username, textValue, method = 0, ruleId = null) {
+  return function hideHandler(itemNode, username, textValue, method = 0) {
     if (username && typeof username === 'object') {
       username = username.textContent;
     }
@@ -39,8 +38,6 @@ export function createHideHandler(deps) {
     } else {
       hideOperation(itemNode, hideStatus, method);
     }
-    if (hideStatus && ruleId) {
-      recordRuleHidden(ruleId);
-    }
+    return hideStatus;
   };
 }

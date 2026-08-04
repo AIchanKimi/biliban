@@ -15,7 +15,7 @@ const VIEW_API = 'https://api.bilibili.com/x/web-interface/view';
  *   initialInfoRecord: Array<{ bv: string, user: string, time: string }>,
  *   saveInfoRecord: (records: Array<{ bv: string, user: string, time: string }>) => Promise<void>,
  * }} deps
- * @returns {(bvNum: string | null, mainEle: Element, textValue, hideMethod?: number, ruleId?: string | null) => void}
+ * @returns {(bvNum: string | null, mainEle: Element, textValue, hideMethod?: number) => boolean | null} 同步判定返回 hideStatus；发起异步查询时返回 null
  */
 export function createUsernameResolver(deps) {
   const { hideHandler, initialInfoRecord, saveInfoRecord } = deps;
@@ -23,60 +23,59 @@ export function createUsernameResolver(deps) {
   let requestTotal = 0;
   let sendStatus = true;
 
-  return function resolveUsername(bvNum, mainEle, textValue, hideMethod = 0, ruleId = null) {
+  return function resolveUsername(bvNum, mainEle, textValue, hideMethod = 0) {
     let userName = '';
-    if (bvNum) {
-      let recordUser = false;
-      infoRecord.forEach(item => {
-        if (item.bv == bvNum) {
-          userName = item.user;
-          recordUser = true;
-        }
-      });
-      if (recordUser) {
-        hideHandler(mainEle, userName, textValue, hideMethod, ruleId);
-      } else {
-        infoRecord.push({
-          bv: bvNum,
-          user: userName,
-          time: todayString(),
-        });
-        const apiUrl = /^\d+$/.test(bvNum) ? `${VIEW_API}?aid=` : `${VIEW_API}?bvid=`;
-        const url = apiUrl + bvNum;
-        setTimeout(() => {
-          if (!sendStatus) {
-            return;
-          }
-          fetch(url)
-            .then(async response => {
-              if (response.ok) {
-                return response.json();
-              }
-              sendStatus = false;
-              console.info(url + '\nresponse status: ' + response.status);
-              return null;
-            })
-            .then(data => {
-              if (data && data.data && data.data.owner && data.data.owner['name']) {
-                userName = data.data.owner['name'];
-              }
-              hideHandler(mainEle, userName, textValue, hideMethod, ruleId);
-              infoRecord.forEach(item => {
-                if (item.bv == bvNum) {
-                  item.user = userName;
-                }
-              });
-              saveInfoRecord(infoRecord);
-            })
-            .catch(() => {
-              console.info(url + '\nerror.');
-              hideHandler(mainEle, userName, textValue, hideMethod, ruleId);
-            });
-        }, INTERVAL_TIME * requestTotal);
-        requestTotal++;
-      }
-    } else {
-      hideHandler(mainEle, userName, textValue, hideMethod, ruleId);
+    if (!bvNum) {
+      return hideHandler(mainEle, userName, textValue, hideMethod);
     }
+    let recordUser = false;
+    infoRecord.forEach(item => {
+      if (item.bv == bvNum) {
+        userName = item.user;
+        recordUser = true;
+      }
+    });
+    if (recordUser) {
+      return hideHandler(mainEle, userName, textValue, hideMethod);
+    }
+    infoRecord.push({
+      bv: bvNum,
+      user: userName,
+      time: todayString(),
+    });
+    const apiUrl = /^\d+$/.test(bvNum) ? `${VIEW_API}?aid=` : `${VIEW_API}?bvid=`;
+    const url = apiUrl + bvNum;
+    setTimeout(() => {
+      if (!sendStatus) {
+        return;
+      }
+      fetch(url)
+        .then(async response => {
+          if (response.ok) {
+            return response.json();
+          }
+          sendStatus = false;
+          console.info(url + '\nresponse status: ' + response.status);
+          return null;
+        })
+        .then(data => {
+          if (data && data.data && data.data.owner && data.data.owner['name']) {
+            userName = data.data.owner['name'];
+          }
+          hideHandler(mainEle, userName, textValue, hideMethod);
+          infoRecord.forEach(item => {
+            if (item.bv == bvNum) {
+              item.user = userName;
+            }
+          });
+          saveInfoRecord(infoRecord);
+        })
+        .catch(() => {
+          console.info(url + '\nerror.');
+          hideHandler(mainEle, userName, textValue, hideMethod);
+        });
+    }, INTERVAL_TIME * requestTotal);
+    requestTotal++;
+    return null; // 异步查询中：本轮无同步结果
   };
 }
