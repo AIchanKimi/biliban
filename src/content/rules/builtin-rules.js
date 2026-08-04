@@ -31,13 +31,13 @@ export const BUILTIN_RULES = Object.freeze([
     scopes: ['search'],
     mode: 'match',
   }),
-  /* 动态页主体视频卡片：视频标题 + 转发视频作者 */
+  /* 动态页主体视频卡片：视频标题 + 转发视频作者（v5.2：动态分类精简，全局词条覆盖） */
   Object.freeze({
     id: 'builtin-dyn-item',
     selector: '.bili-dyn-item',
     userSelector: '.bili-dyn-item .dyn-orig-author__name',
     titleSelector: '.bili-dyn-card-video__title',
-    scopes: ['dynamics'],
+    scopes: ['global'],
     mode: 'match',
   }),
   /* 稍后再看右侧栏 */
@@ -58,12 +58,12 @@ export const BUILTIN_RULES = Object.freeze([
     scopes: ['home', 'video'],
     mode: 'match',
   }),
-  /* UP主空间视频主页内容 */
+  /* UP主空间视频主页内容（v5.2：空间分类精简，全局词条覆盖） */
   Object.freeze({
     id: 'builtin-space-cube',
     selector: '.cube-list .small-item',
     titleSelector: '.small-item .title',
-    scopes: ['space'],
+    scopes: ['global'],
     mode: 'match',
   }),
   /* 下拉动态卡片（旧含裸 bilibili.com → 全子域） */

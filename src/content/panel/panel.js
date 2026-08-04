@@ -27,9 +27,13 @@ import {
 import { CONFIG_VERSION } from '../config/defaults.js';
 import { SCOPES } from '../config/scopes.js';
 import { getTempEntries, setTempEntries, removeTempEntriesByScope } from '../config/temp-store.js';
+import { getRuleStats } from '../engine/rule-stats.js';
+import { RULE_STATS_CLASS, RULE_STATS_HIT_CLASS } from '../constants.js';
 import { createGeneralSection } from './sections/general.js';
 import { createScopePane } from './sections/scope-pane.js';
 import { SAVE_FLASH_TEXT } from './panel-text.js';
+
+const STATS_REFRESH_MS = 1000;
 
 /**
  * @param {{
@@ -52,8 +56,12 @@ export function createPanel(deps) {
   let cancelTimer = null;
   let display = false;
 
-  const tempByScope = scope => getTempEntries().filter(entry => entry.scopes.includes(scope));
+  const tempWordsByScope = scope =>
+    getTempEntries().filter(entry => entry.kind === 'word' && entry.scopes.includes(scope));
+  const tempDurationsByScope = scope =>
+    getTempEntries().filter(entry => entry.kind === 'duration' && entry.scopes.includes(scope));
   const entriesByScope = (list, scope) => (list ?? []).filter(entry => entry.scopes.includes(scope));
+  let statsTimer = null;
 
   function build() {
     wrapDiv = document.createElement('div');
@@ -79,7 +87,7 @@ export function createPanel(deps) {
     tabSeparator.className = SEPARATOR_LI_CLASS;
     const tabSeparatorText = document.createElement('span');
     tabSeparatorText.className = SEPARATOR_TEXT_CLASS;
-    tabSeparatorText.textContent = '按页面分类管理（「全局」中的词条处处生效）：';
+    tabSeparatorText.textContent = '按页面分类管理（「全局」处处生效；动态/空间等页面由全局词条覆盖）：';
     tabSeparator.appendChild(tabSeparatorText);
     ulNode.appendChild(tabSeparator);
 
@@ -104,7 +112,9 @@ export function createPanel(deps) {
       const pane = createScopePane({
         scope,
         words: entriesByScope(config.words, scope),
-        tempWords: tempByScope(scope),
+        tempWords: tempWordsByScope(scope),
+        durations: entriesByScope(config.durations, scope),
+        tempDurations: tempDurationsByScope(scope),
         rules: entriesByScope(config.rules, scope),
         onTempCleared: () => {
           removeTempEntriesByScope(scope);
@@ -173,21 +183,54 @@ export function createPanel(deps) {
   function collectFromDom() {
     const general = generalSection.collect();
     const words = [];
+    const durations = [];
     const temp = [];
     const rules = [];
     let invalidCount = 0;
     for (const { pane } of panes) {
       const result = pane.collect();
       words.push(...result.words.persistent);
-      temp.push(...result.words.temp);
+      durations.push(...result.durations.persistent);
+      temp.push(
+        ...result.words.temp.map(entry => ({ ...entry, kind: 'word' })),
+        ...result.durations.temp.map(entry => ({ ...entry, kind: 'duration' }))
+      );
       rules.push(...result.rules);
       invalidCount += result.invalidCount;
     }
     return {
-      storage: { version: CONFIG_VERSION, enable: general.enable, duration: general.duration, words, rules },
+      storage: { version: CONFIG_VERSION, enable: general.enable, words, durations, rules },
       temp,
       invalidCount,
     };
+  }
+
+  /** 命中统计徽标刷新（面板可见期间每秒一次） */
+  function refreshStatsBadges() {
+    if (!wrapDiv) {
+      return;
+    }
+    const stats = getRuleStats();
+    for (const badge of wrapDiv.getElementsByClassName(RULE_STATS_CLASS)) {
+      const entry = stats[badge.dataset.ruleId];
+      badge.textContent = entry ? `找到 ${entry.found} · 隐藏 ${entry.hidden}` : '未命中';
+      badge.classList.toggle(RULE_STATS_HIT_CLASS, Boolean(entry && entry.found > 0));
+    }
+  }
+
+  function startStatsTimer() {
+    if (statsTimer) {
+      return;
+    }
+    refreshStatsBadges();
+    statsTimer = window.setInterval(refreshStatsBadges, STATS_REFRESH_MS);
+  }
+
+  function stopStatsTimer() {
+    if (statsTimer) {
+      window.clearInterval(statsTimer);
+      statsTimer = null;
+    }
   }
 
   async function save(clickedBtn = null) {
@@ -211,10 +254,12 @@ export function createPanel(deps) {
         display = false;
         panel.classList.remove(WRAP_SHOW_CLASS);
         panel.classList.add(WRAP_HIDDEN_CLASS);
+        stopStatsTimer();
       } else {
         display = true;
         panel.classList.remove(WRAP_HIDDEN_CLASS);
         panel.classList.add(WRAP_SHOW_CLASS);
+        startStatsTimer();
       }
     }
   }
@@ -222,11 +267,15 @@ export function createPanel(deps) {
   /** 销毁并按新配置重建（取消 / 远端同步）；临时词条从 temp-store 重新渲染。 */
   function rebuild(newConfig = null) {
     config = newConfig ? { ...newConfig } : config;
+    stopStatsTimer();
     const existing = document.getElementById(WRAP_ID);
     if (existing) {
       existing.remove();
     }
     build();
+    if (display) {
+      startStatsTimer();
+    }
   }
 
   function init() {

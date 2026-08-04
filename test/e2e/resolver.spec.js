@@ -10,9 +10,8 @@ test.describe('BV → 用户名异步查询（c:2 规则）', () => {
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);
     await seedConfig(toolsPage, {
-      version: 3,
+      version: 4,
       enable: true,
-      duration: { enable: false, minSeconds: 300 },
       words: [{ value: '异步UP', scopes: ['global'] }],
       rules: [],
     });
@@ -41,9 +40,8 @@ test.describe('BV → 用户名异步查询（c:2 规则）', () => {
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);
     await seedConfig(toolsPage, {
-      version: 3,
+      version: 4,
       enable: true,
-      duration: { enable: false, minSeconds: 300 },
       words: [{ value: '异步UP', scopes: ['global'] }],
       rules: [],
     });

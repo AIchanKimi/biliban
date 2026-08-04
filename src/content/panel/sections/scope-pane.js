@@ -2,6 +2,7 @@
 // 作用域由标签页承载，组内不再出现作用域选择。
 import { FIELD_ID_PREFIX, SCOPE_PANE_CLASS, UL_NODE_CLASS, SEPARATOR_LI_CLASS, SEPARATOR_TEXT_CLASS, LIST_DIV_CLASS, LI_WORDS_CLASS } from '../../constants.js';
 import { createEntriesGroup } from './entries.js';
+import { createDurationsGroup } from './durations.js';
 import { createRulesGroup } from './rules.js';
 import { buttonClicked, createSpanBtn } from '../input-row.js';
 import { removeTempChips } from '../chips.js';
@@ -11,16 +12,18 @@ import { removeTempChips } from '../chips.js';
  *   scope: string,
  *   words: ReadonlyArray<{ value: string, scopes: string[] }>,
  *   tempWords: ReadonlyArray<{ value: string, scopes: string[] }>,
+ *   durations: ReadonlyArray<{ op: string, seconds: number, scopes: string[] }>,
+ *   tempDurations: ReadonlyArray<{ op: string, seconds: number, scopes: string[] }>,
  *   rules: ReadonlyArray<Record<string, unknown>>,
  *   onTempCleared: () => void,
  * }} params
  * @returns {{
  *   el: HTMLElement,
- *   collect: () => { words: { persistent: Array<object>, temp: Array<object> }, rules: Array<Record<string, unknown>>, invalidCount: number },
+ *   collect: () => { words: object, durations: object, rules: Array<Record<string, unknown>>, invalidCount: number },
  * }}
  */
 export function createScopePane(params) {
-  const { scope, words, tempWords, rules, onTempCleared } = params;
+  const { scope, words, tempWords, durations, tempDurations, rules, onTempCleared } = params;
 
   const pane = document.createElement('li');
   pane.className = SCOPE_PANE_CLASS;
@@ -35,6 +38,12 @@ export function createScopePane(params) {
     liClassname: LI_WORDS_CLASS,
     entries: words,
     tempEntries: tempWords,
+  });
+
+  const durationsGroup = createDurationsGroup({
+    scope,
+    entries: durations,
+    tempEntries: tempDurations,
   });
 
   const ruleSeparator = document.createElement('li');
@@ -66,15 +75,17 @@ export function createScopePane(params) {
   clearTempDiv.appendChild(clearTempBtn);
   clearTempLi.appendChild(clearTempDiv);
 
-  for (const li of [...wordsGroup.lis, ruleSeparator, rulesLi, clearTempLi]) {
+  for (const li of [...wordsGroup.lis, ...durationsGroup.lis, ruleSeparator, rulesLi, clearTempLi]) {
     innerUl.appendChild(li);
   }
 
   function collect() {
     const wordsResult = wordsGroup.collect();
+    const durationsResult = durationsGroup.collect();
     const rulesResult = rulesGroup.collect();
     return {
       words: wordsResult,
+      durations: durationsResult,
       rules: rulesResult.rules,
       invalidCount: rulesResult.invalidCount,
     };

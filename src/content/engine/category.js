@@ -1,10 +1,11 @@
-// 页面分类（v5）：由当前 URL 推导作用域分类。
-// v5 行为修复：hideEvent 每次执行实时读取 location.href（v4 只在启动时捕获一次，
-// 导致首页 SPA 跳进视频页后 video 作用域规则永不生效）。
+// 页面分类（v5.2 精简）：由当前 URL 推导作用域分类。
+// 用户可见分类：home/video/search；动态（t./opus）与空间页归为内部 'other'，
+// 仅全局词条/规则生效（面板不提供这两个分类）。
+// v5 行为修复保留：hideEvent 每次执行实时读取 location.href（SPA 友好）。
 
 /**
  * @param {string | null | undefined} href
- * @returns {'home' | 'video' | 'search' | 'dynamics' | 'space' | null} 扩展不注入的页面返回 null
+ * @returns {'home' | 'video' | 'search' | 'other' | null} 扩展不注入的页面返回 null
  */
 export function categoryFor(href) {
   if (typeof href !== 'string' || href === '') {
@@ -13,16 +14,10 @@ export function categoryFor(href) {
   if (href.includes('search.bilibili.com')) {
     return 'search';
   }
-  if (href.includes('t.bilibili.com')) {
-    return 'dynamics';
-  }
-  if (href.includes('space.bilibili.com')) {
-    return 'space';
+  if (href.includes('t.bilibili.com') || href.includes('www.bilibili.com/opus/') || href.includes('space.bilibili.com')) {
+    return 'other';
   }
   if (href.includes('www.bilibili.com')) {
-    if (href.includes('www.bilibili.com/opus/')) {
-      return 'dynamics';
-    }
     if (href.includes('/video/') || href.includes('/bangumi/')) {
       return 'video';
     }

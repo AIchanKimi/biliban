@@ -34,10 +34,10 @@ test.describe('临时屏蔽（仅标签页内存）', () => {
     const extensionId = await getExtensionId(context);
     toolsPage = await openToolsPage(context, extensionId);
     await seedConfig(toolsPage, {
-      version: 3,
+      version: 4,
       enable: true,
-      duration: { enable: false, minSeconds: 300 },
       words: [],
+      durations: [],
       rules: [],
     });
   });

@@ -1,17 +1,22 @@
-// 面板分节：自定义规则组（归属于某个作用域标签页，规则本身不再选作用域）。
-// B 站改版后可在此直接改选择器，无需修改扩展代码。
-// 模式两档（原「按词条匹配/直接隐藏」改名）：
-//   按屏蔽词过滤 —— 选择器定位的卡片按本页面词条过滤（默认）
-//   直接隐藏     —— 命中选择器即隐藏，不检查词条
-// 收集时校验：选择器必须可编译；过滤模式必须至少提供标题或 UP主选择器之一。
+// 面板分节：规则组（归属某作用域标签页）。
+// 组成：内置规则（只读展示 + 命中统计）→ 自定义规则（可编辑）→ 添加按钮。
+// 命中统计（rule-stats）让用户识别失效/无用规则：找到 N · 隐藏 M，有命中高亮。
+// 自定义规则两种模式：
+//   按屏蔽词过滤（match，默认）—— 选择器定位卡片，按本页面词条过滤
+//   直接隐藏（hide）—— 命中选择器即隐藏，不检查词条
 import {
   INPUT_CLASS,
   SELECT_CLASS,
   RULE_ROW_CLASS,
+  RULE_BUILTIN_ROW_CLASS,
+  RULE_BUILTIN_BADGE_CLASS,
+  RULE_STATS_CLASS,
   RULE_MORE_CLASS,
   CHECKBOX_INPUT_CLASS,
   CHECKBOX_LABEL_CLASS,
 } from '../../constants.js';
+import { BUILTIN_RULES } from '../../rules/builtin-rules.js';
+import { getRuleStats } from '../../engine/rule-stats.js';
 import { createSpanBtn } from '../input-row.js';
 
 /** 模式下拉选项：value → 显示文案 */
@@ -19,6 +24,10 @@ export const MODE_LABELS = Object.freeze([
   Object.freeze({ value: 'match', label: '按屏蔽词过滤' }),
   Object.freeze({ value: 'hide', label: '直接隐藏' }),
 ]);
+
+function modeLabel(mode) {
+  return MODE_LABELS.find(item => item.value === mode)?.label ?? mode;
+}
 
 /**
  * @param {string} selector
@@ -46,7 +55,52 @@ function textInput(value, placeholder, title) {
   return input;
 }
 
+/** 命中统计徽标（面板定时器按 data-rule-id 刷新） */
+function createStatsBadge(ruleId) {
+  const badge = document.createElement('span');
+  badge.className = RULE_STATS_CLASS;
+  badge.dataset.ruleId = ruleId;
+  const stats = getRuleStats()[ruleId];
+  badge.textContent = stats ? `找到 ${stats.found} · 隐藏 ${stats.hidden}` : '未命中';
+  if (stats && stats.found > 0) {
+    badge.title = '本页面（本次加载）该规则选择器命中的元素数与实际屏蔽数';
+  }
+  return badge;
+}
+
 /**
+ * 内置规则行（只读）。
+ * @param {Readonly<Record<string, unknown>>} rule
+ * @returns {HTMLElement}
+ */
+export function createBuiltinRow(rule) {
+  const row = document.createElement('div');
+  row.className = RULE_BUILTIN_ROW_CLASS;
+  row.dataset.ruleId = rule.id;
+
+  const badge = document.createElement('span');
+  badge.className = RULE_BUILTIN_BADGE_CLASS;
+  badge.textContent = '内置';
+  badge.title = '扩展自带的卡片选择器；B 站改版失效时可用下方「添加规则」自行补一条';
+
+  const selectorSpan = document.createElement('span');
+  selectorSpan.className = 'block_obj_rule_selector';
+  selectorSpan.textContent = rule.selector;
+  selectorSpan.title = String(rule.selector);
+
+  const modeSpan = document.createElement('span');
+  modeSpan.className = 'block_obj_rule_mode';
+  modeSpan.textContent = modeLabel(rule.mode);
+
+  row.appendChild(badge);
+  row.appendChild(selectorSpan);
+  row.appendChild(modeSpan);
+  row.appendChild(createStatsBadge(rule.id));
+  return row;
+}
+
+/**
+ * 自定义规则行（可编辑）。
  * @param {{ id?: string, selector?: string, mode?: string, titleSelector?: string, userSelector?: string, enabled?: boolean }} rule
  * @returns {HTMLElement}
  */
@@ -74,7 +128,7 @@ export function createRuleRow(rule = {}) {
     option.textContent = label;
     option.selected = rule.mode === value;
     if (value === 'match') {
-      option.title = '选择器定位的卡片按本页面用户名/关键字词条过滤';
+      option.title = '选择器定位的卡片按本页面屏蔽词/时长过滤';
     } else {
       option.title = '命中选择器的元素直接隐藏，不检查词条';
     }
@@ -106,17 +160,24 @@ export function createRuleRow(rule = {}) {
   row.appendChild(modeSel);
   row.appendChild(moreBtn);
   row.appendChild(delBtn);
+  row.appendChild(createStatsBadge(row.dataset.ruleId));
   row.appendChild(moreDiv);
   return row;
 }
 
 /**
- * 某作用域下的规则组。
+ * 某作用域下的规则组（内置只读 + 自定义可编辑）。
  * @param {{ scope: string, rules: ReadonlyArray<Record<string, unknown>> }} params
  * @returns {{ container: HTMLElement, collect: () => { rules: Array<Record<string, unknown>>, invalidCount: number } }}
  */
 export function createRulesGroup({ scope, rules }) {
   const container = document.createElement('div');
+
+  for (const rule of BUILTIN_RULES) {
+    if (rule.scopes.includes(scope)) {
+      container.appendChild(createBuiltinRow(rule));
+    }
+  }
   for (const rule of rules ?? []) {
     container.appendChild(createRuleRow(rule));
   }

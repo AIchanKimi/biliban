@@ -1,6 +1,6 @@
 // 配置存储层 v3：chrome.storage.local 读写 + 旧版本迁移（版本化备份+写回）+ 多标签页同步订阅。
 // 存储形状见 defaults.js；屏蔽词正则转换见 serialize.js；临时词条在 temp-store.js（不落盘）。
-import { CONFIG_KEY, INFO_RECORD_KEY, DEFAULT_MIN_SECONDS, CONFIG_VERSION, backupKeyFor } from './defaults.js';
+import { CONFIG_KEY, INFO_RECORD_KEY, CONFIG_VERSION, backupKeyFor } from './defaults.js';
 import { isCurrentVersion, migrateToLatest } from './migrate.js';
 import { toRuntimeWordEntries, toStorageWordEntries } from './serialize.js';
 import { normalizeScopes } from './scopes.js';
@@ -86,16 +86,34 @@ function sanitizeRule(rule) {
 }
 
 /**
- * @param {unknown} duration
- * @returns {Readonly<{ enable: boolean, minSeconds: number }>}
+ * @param {unknown} entry
+ * @returns {Readonly<{ op: 'lt' | 'gt', seconds: number, scopes: ReadonlyArray<string> }> | null}
  */
-function sanitizeDuration(duration) {
-  const source = duration !== null && typeof duration === 'object' ? duration : {};
-  const min = Number(source.minSeconds);
-  return Object.freeze({
-    enable: Boolean(source.enable),
-    minSeconds: Number.isFinite(min) && min > 0 ? min : DEFAULT_MIN_SECONDS,
-  });
+function sanitizeDurationEntry(entry) {
+  if (!entry || (entry.op !== 'lt' && entry.op !== 'gt')) {
+    return null;
+  }
+  const seconds = Number(entry.seconds);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return null;
+  }
+  return Object.freeze({ op: entry.op, seconds, scopes: Object.freeze(normalizeScopes(entry.scopes)) });
+}
+
+/**
+ * @param {unknown} list
+ * @returns {ReadonlyArray<Readonly<{ op: 'lt' | 'gt', seconds: number, scopes: ReadonlyArray<string> }>>}
+ */
+function sanitizeDurations(list) {
+  const source = Array.isArray(list) ? list : [];
+  const result = [];
+  for (const entry of source) {
+    const sanitized = sanitizeDurationEntry(entry);
+    if (sanitized) {
+      result.push(sanitized);
+    }
+  }
+  return Object.freeze(result);
 }
 
 /**
@@ -116,8 +134,8 @@ export function normalize(rawConfig) {
   return Object.freeze({
     version: CONFIG_VERSION,
     enable: base.enable ?? true,
-    duration: sanitizeDuration(base.duration),
     words: sanitizeEntries(base.words),
+    durations: sanitizeDurations(base.durations),
     rules: Object.freeze(rules),
   });
 }

@@ -25,7 +25,7 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await setupBilibiliRoutes(context, { 'www.bilibili.com': 'video-cards.html' });
     const extensionId = await getExtensionId(context);
     toolsPage = await openToolsPage(context, extensionId);
-    await seedConfig(toolsPage, { version: 3, enable: true, duration: { enable: false, minSeconds: 300 }, words: [], rules: [] });
+    await seedConfig(toolsPage, { version: 4, enable: true, words: [], rules: [] });
   });
   test.afterAll(async () => context.close());
 
@@ -40,11 +40,11 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
-  test('六个分类标签齐全，默认停在「全局」', async () => {
+  test('四个分类标签齐全（v5.2 精简），默认停在「全局」', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
-    for (const [scope, label] of [['global', '全局'], ['home', '首页'], ['video', '视频页'], ['search', '搜索'], ['dynamics', '动态'], ['space', '空间']]) {
+    for (const [scope, label] of [['global', '全局'], ['home', '首页'], ['video', '视频页'], ['search', '搜索']]) {
       await expect(page.locator(`#bilibiliConfig_tab_${scope}`)).toHaveText(label);
     }
     await expect(page.locator('#bilibiliConfig_tab_global')).toHaveClass(/block_obj_tab_active/);
@@ -86,16 +86,52 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/');
     await openPanel(page);
-    const checkbox = page.locator('#bilibiliConfig_durationEnable');
-    await expect(checkbox).not.toBeChecked();
-    // Block_Obj 样式 checkbox：input 被 clip 隐藏、label::before 是可视控件，点击 label 切换
-    await page.locator('label[for="bilibiliConfig_durationEnable"]').click();
+    const checkbox = page.locator('#bilibiliConfig_enable');
     await expect(checkbox).toBeChecked();
+    // Block_Obj 样式 checkbox：input 被 clip 隐藏、label::before 是可视控件，点击 label 切换
+    await page.locator('label[for="bilibiliConfig_enable"]').click();
+    await expect(checkbox).not.toBeChecked();
     await page.locator("xpath=//span[text()='取消']").click();
     await expect(page.locator(WRAP)).toHaveClass(/block_obj_hidden_wrap/);
     // 重建后恢复为已保存状态
     await openPanel(page);
-    await expect(checkbox).not.toBeChecked();
+    await expect(page.locator('#bilibiliConfig_enable')).toBeChecked();
+    await page.close();
+  });
+
+  test('时长词条：面板添加「短于 0.5 分钟」→ 落盘 durations 词条', async () => {
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/');
+    await openPanel(page);
+    await page.selectOption('#bilibiliConfig_durationOp_global', 'lt');
+    await page.fill('#bilibiliConfig_durationMinutes_global', '0.5');
+    await page
+      .locator("xpath=//input[@id='bilibiliConfig_durationMinutes_global']/following::span[text()='添加'][1]")
+      .click();
+    await expect(page.locator('#bilibiliConfig_durations_global')).toContainText('短于 0.5 分钟');
+    await page.locator("xpath=//span[@title='仅保存设置']").click();
+    await expect
+      .poll(async () => (await readStorageKey(toolsPage, 'bilibili_config')).durations)
+      .toEqual([{ op: 'lt', seconds: 30, scopes: ['global'] }]);
+    // 还原：清掉该词条避免影响后续用例
+    await seedConfig(toolsPage, { version: 4, enable: true, words: [], durations: [], rules: [] });
+    await page.close();
+  });
+
+  test('内置规则展示 + 命中统计徽标（找到 N · 隐藏 M，命中高亮）', async () => {
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/');
+    await openPanel(page);
+    await page.locator('#bilibiliConfig_tab_home').click();
+    // 内置规则行：只读展示选择器
+    const builtinRows = page.locator('#bilibiliConfig_pane_home .block_obj_rule_row_builtin');
+    await expect(builtinRows.first()).toBeVisible();
+    await expect(page.locator('#bilibiliConfig_pane_home')).toContainText('.video-card-common');
+    await expect(page.locator('#bilibiliConfig_pane_home')).toContainText('内置');
+    // fixture 有 6 张 .video-card-common 卡片：该规则统计徽标命中（引擎在面板打开前已跑过多轮）
+    const statsBadge = page.locator('#bilibiliConfig_pane_home .block_obj_rule_stats[data-rule-id="builtin-video-card-common"]');
+    await expect(statsBadge).toHaveText(/找到 \d+ · 隐藏 \d+/);
+    await expect(statsBadge).toHaveClass(/block_obj_rule_stats_hit/);
     await page.close();
   });
 

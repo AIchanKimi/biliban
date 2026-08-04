@@ -2,10 +2,10 @@ import { describe, test, expect } from 'bun:test';
 import { decide } from '../../src/content/engine/decide.js';
 
 const config = (overrides = {}) => ({
-  version: 3,
+  version: 4,
   enable: true,
-  duration: { enable: false, minSeconds: 300 },
   words: [],
+  durations: [],
   rules: [],
   ...overrides,
 });

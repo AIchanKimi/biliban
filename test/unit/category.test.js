@@ -1,22 +1,9 @@
 import { describe, test, expect } from 'bun:test';
 import { categoryFor } from '../../src/content/engine/category.js';
 
-describe('categoryFor（URL → 页面分类）', () => {
+describe('categoryFor（URL → 页面分类，v5.2 精简）', () => {
   test('search 子域', () => {
     expect(categoryFor('https://search.bilibili.com/all?keyword=x')).toBe('search');
-  });
-
-  test('t 子域动态', () => {
-    expect(categoryFor('https://t.bilibili.com/')).toBe('dynamics');
-    expect(categoryFor('https://t.bilibili.com/123456')).toBe('dynamics');
-  });
-
-  test('www 下 /opus/ 新版动态页归 dynamics', () => {
-    expect(categoryFor('https://www.bilibili.com/opus/987654')).toBe('dynamics');
-  });
-
-  test('space 子域', () => {
-    expect(categoryFor('https://space.bilibili.com/123/video')).toBe('space');
   });
 
   test('www 视频/番剧播放页', () => {
@@ -30,7 +17,13 @@ describe('categoryFor（URL → 页面分类）', () => {
     expect(categoryFor('https://www.bilibili.com/list/watchlater')).toBe('home');
     expect(categoryFor('https://www.bilibili.com/v/popular/all')).toBe('home');
     expect(categoryFor('https://www.bilibili.com/read/ranking')).toBe('home');
-    expect(categoryFor('https://www.bilibili.com/v/channel')).toBe('home');
+  });
+
+  test('动态（t 域 / opus）与空间归 other（仅全局词条生效）', () => {
+    expect(categoryFor('https://t.bilibili.com/')).toBe('other');
+    expect(categoryFor('https://t.bilibili.com/123456')).toBe('other');
+    expect(categoryFor('https://www.bilibili.com/opus/987654')).toBe('other');
+    expect(categoryFor('https://space.bilibili.com/123/video')).toBe('other');
   });
 
   test('扩展不注入的域名返回 null', () => {

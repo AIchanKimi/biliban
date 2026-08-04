@@ -12,27 +12,32 @@ import {
 import { REGEX_LITERAL_RE } from '../config/serialize.js';
 
 /**
- * @typedef {{ value: string, scopes: string[], temp?: boolean }} ChipEntry
+ * @typedef {{ value: string, scopes: string[], temp?: boolean, label?: string, dataset?: Record<string, string> }} ChipEntry
  */
 
 /**
- * 创建单个 chip。
+ * 创建单个 chip。value 为收集真值；label 可选（显示文本与 value 不同时，如时长词条）。
+ * dataset 可选，合并到 chip 根节点（如时长词条的 op/seconds）。
  * @param {ChipEntry} entry
  * @returns {HTMLElement}
  */
 export function createChip(entry) {
-  const { value, scopes, temp = false } = entry;
+  const { value, scopes, temp = false, label, dataset } = entry;
   const childSpan = document.createElement('span');
   childSpan.className = CHIP_CLASS;
   childSpan.dataset.scopes = scopes.join(',');
   childSpan.dataset.temp = temp ? '1' : '0';
+  for (const [key, val] of Object.entries(dataset ?? {})) {
+    childSpan.dataset[key] = val;
+  }
 
+  const display = label ?? value;
   const textSpan = document.createElement('span');
   textSpan.className = REGEX_LITERAL_RE.test(value) ? `${CHIP_TEXT_CLASS} ${CHIP_GREEN_CLASS}` : CHIP_TEXT_CLASS;
   textSpan.textContent =
-    value.length > CHIP_TRUNCATE_LIMIT ? value.slice(0, 3) + ' ... ' + value.slice(-3) : value;
-  if (value.length > CHIP_TRUNCATE_LIMIT) {
-    textSpan.title = value;
+    display.length > CHIP_TRUNCATE_LIMIT ? display.slice(0, 3) + ' ... ' + display.slice(-3) : display;
+  if (display.length > CHIP_TRUNCATE_LIMIT) {
+    textSpan.title = display;
   }
   childSpan.appendChild(textSpan);
 

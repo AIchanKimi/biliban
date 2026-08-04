@@ -219,6 +219,48 @@ export const LIB_STYLE = `
   .block_obj_rule_more {
     margin-top: 4px;
   }
+  .block_obj_rule_row_builtin {
+    border: 1px solid #3D3D3D;
+    border-radius: 3px;
+    margin-top: 4px;
+    padding: 4px;
+    opacity: 0.9;
+  }
+  .block_obj_rule_selector {
+    color: #8be9fd;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    margin-left: 6px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: bottom;
+  }
+  .block_obj_rule_mode {
+    color: #a0a0a0;
+    margin-left: 6px;
+  }
+  .block_obj_rule_builtin_badge {
+    background-color: #555;
+    border-radius: 3px;
+    color: #FFF;
+    font-size: 11px;
+    padding: 0 4px;
+  }
+  .block_obj_rule_stats {
+    border-radius: 3px;
+    border: 1px solid #555;
+    color: #8a8a8a;
+    font-size: 11px;
+    margin-left: 6px;
+    padding: 0 4px;
+  }
+  .block_obj_rule_stats_hit {
+    border-color: #41B349;
+    color: #41B349;
+  }
   .block_obj_button {
     background-color: #FB7299;
     border-radius: 4px;

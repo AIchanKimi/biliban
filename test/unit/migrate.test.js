@@ -1,25 +1,25 @@
 import { describe, test, expect } from 'bun:test';
 import { isCurrentVersion, migrateToLatest } from '../../src/content/config/migrate.js';
 
-const V3_EMPTY = {
-  version: 3,
+const V4_EMPTY = {
+  version: 4,
   enable: true,
-  duration: { enable: false, minSeconds: 300 },
   words: [],
+  durations: [],
   rules: [],
 };
 
 describe('isCurrentVersion', () => {
-  test('version===3 才算当前版本', () => {
-    expect(isCurrentVersion({ version: 3 })).toBe(true);
+  test('version===4 才算当前版本', () => {
+    expect(isCurrentVersion({ version: 4 })).toBe(true);
+    expect(isCurrentVersion({ version: 3 })).toBe(false);
     expect(isCurrentVersion({ version: 2 })).toBe(false);
-    expect(isCurrentVersion({ version: 1 })).toBe(false);
     expect(isCurrentVersion({})).toBe(false);
     expect(isCurrentVersion(null)).toBe(false);
   });
 });
 
-describe('migrateToLatest：v1 → v3', () => {
+describe('migrateToLatest：v1 → v4', () => {
   test('usernameArray 与 keywordArray 合并为全局 words（用户名在前）', () => {
     const result = migrateToLatest({ usernameArray: ['某UP'], keywordArray: ['广告', '/x/i'] });
     expect(result.words).toEqual([
@@ -27,7 +27,8 @@ describe('migrateToLatest：v1 → v3', () => {
       { value: '广告', scopes: ['global'] },
       { value: '/x/i', scopes: ['global'] },
     ]);
-    expect(result.version).toBe(3);
+    expect(result.version).toBe(4);
+    expect(result.durations).toEqual([]);
   });
 
   test('TM 旧形状：regArray 并入', () => {
@@ -47,24 +48,12 @@ describe('migrateToLatest：v1 → v3', () => {
       whitelistArray: ['白名单'],
       commentEnable: true,
       liveEnable: true,
-      messageReplyEnable: true,
     });
-    expect(result).toEqual(V3_EMPTY);
+    expect(result).toEqual(V4_EMPTY);
   });
 
-  test('同值去重（值+作用域）', () => {
-    const result = migrateToLatest({ usernameArray: ['dup'], keywordArray: ['dup'] });
-    expect(result.words).toEqual([{ value: 'dup', scopes: ['global'] }]);
-  });
-
-  test('非字符串/空串词条被过滤', () => {
-    const result = migrateToLatest({ keywordArray: ['有效', '', null, 42, '  '] });
-    expect(result.words.map(e => e.value)).toEqual(['有效', '  ']);
-  });
-
-  test('null / undefined 输入 → 默认 v3', () => {
-    expect(migrateToLatest(null)).toEqual(V3_EMPTY);
-    expect(migrateToLatest(undefined)).toEqual(V3_EMPTY);
+  test('null / undefined 输入 → 默认 v4', () => {
+    expect(migrateToLatest(null)).toEqual(V4_EMPTY);
   });
 
   test('不修改入参（不可变）', () => {
@@ -74,8 +63,8 @@ describe('migrateToLatest：v1 → v3', () => {
   });
 });
 
-describe('migrateToLatest：v2 → v3', () => {
-  test('usernames 与 keywords 合并为 words，保留作用域', () => {
+describe('migrateToLatest：v2 → v4', () => {
+  test('usernames 与 keywords 合并，保留作用域', () => {
     const result = migrateToLatest({
       version: 2,
       enable: true,
@@ -88,35 +77,52 @@ describe('migrateToLatest：v2 → v3', () => {
       { value: '某UP', scopes: ['global'] },
       { value: '广告', scopes: ['search'] },
     ]);
-    expect(result.duration).toEqual({ enable: true, minSeconds: 120 });
+    expect(result.durations).toEqual([{ op: 'lt', seconds: 120, scopes: ['global'] }]);
     expect(result.rules.length).toBe(1);
   });
+});
 
-  test('跨列表同值同作用域去重', () => {
+describe('migrateToLatest：v3 → v4', () => {
+  test('全局 duration 开关转为「短于」词条', () => {
     const result = migrateToLatest({
-      version: 2,
-      usernames: [{ value: 'dup', scopes: ['global'] }],
-      keywords: [{ value: 'dup', scopes: ['global'] }, { value: 'dup', scopes: ['home'] }],
+      version: 3,
+      enable: true,
+      duration: { enable: true, minSeconds: 60 },
+      words: [{ value: '广告', scopes: ['global'] }],
+      rules: [{ id: 'r1', selector: '.x', scopes: ['home'], mode: 'hide' }],
+    });
+    expect(result).toEqual({
+      version: 4,
+      enable: true,
+      words: [{ value: '广告', scopes: ['global'] }],
+      durations: [{ op: 'lt', seconds: 60, scopes: ['global'] }],
+      rules: [{ id: 'r1', selector: '.x', scopes: ['home'], mode: 'hide' }],
+    });
+  });
+
+  test('duration 关闭 → 无词条', () => {
+    const result = migrateToLatest({ version: 3, duration: { enable: false, minSeconds: 60 }, words: [] });
+    expect(result.durations).toEqual([]);
+  });
+
+  test('非法阈值 → 无词条', () => {
+    const result = migrateToLatest({ version: 3, duration: { enable: true, minSeconds: -5 }, words: [] });
+    expect(result.durations).toEqual([]);
+  });
+
+  test('words 去重与过滤', () => {
+    const result = migrateToLatest({
+      version: 3,
+      words: [
+        { value: 'a', scopes: ['global'] },
+        { value: 'a', scopes: ['global'] },
+        { value: '', scopes: ['global'] },
+        { value: 'b', scopes: ['home'] },
+      ],
     });
     expect(result.words).toEqual([
-      { value: 'dup', scopes: ['global'] },
-      { value: 'dup', scopes: ['home'] },
+      { value: 'a', scopes: ['global'] },
+      { value: 'b', scopes: ['home'] },
     ]);
-  });
-
-  test('非法词条对象被过滤', () => {
-    const result = migrateToLatest({
-      version: 2,
-      usernames: [{ value: '', scopes: ['global'] }, null, { value: 42 }],
-      keywords: [{ value: 'ok', scopes: ['home'] }],
-    });
-    expect(result.words).toEqual([{ value: 'ok', scopes: ['home'] }]);
-  });
-
-  test('缺失字段回落默认', () => {
-    const result = migrateToLatest({ version: 2 });
-    expect(result.enable).toBe(true);
-    expect(result.words).toEqual([]);
-    expect(result.rules).toEqual([]);
   });
 });

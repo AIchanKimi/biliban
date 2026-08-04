@@ -5,17 +5,17 @@ import { setupBilibiliRoutes, setupApiRoute } from './helpers/bilibili-routes.js
 const NONE = 'block_obj_none'; // method 0：display 类
 const HIDDEN = 'block_obj_hidden'; // method 1：visibility 类
 
-const V3_CONFIG = {
-  version: 3,
+const V4_CONFIG = {
+  version: 4,
   enable: true,
-  duration: { enable: false, minSeconds: 300 },
   words: [
     { value: '讨厌的UP', scopes: ['global'] }, // UP主名精确匹配
     { value: '广告UP', scopes: ['global'] },
     { value: '广告', scopes: ['global'] }, // 标题包含匹配
     { value: '搜索专属词', scopes: ['search'] },
-    { value: '动态广告', scopes: ['dynamics'] },
+    { value: '动态广告', scopes: ['global'] }, // v5.2：动态页由全局词条覆盖
   ],
+  durations: [],
   rules: [],
 };
 
@@ -32,7 +32,7 @@ test.describe('作用域与内置规则', () => {
     await setupApiRoute(context, { ownerName: '正常UP' });
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);
-    await seedConfig(toolsPage, V3_CONFIG);
+    await seedConfig(toolsPage, V4_CONFIG);
   });
   test.afterAll(async () => context.close());
 
@@ -102,7 +102,7 @@ test.describe('作用域与内置规则', () => {
     await page.close();
   });
 
-  test('dynamics 作用域：标题关键字与作者用户名', async () => {
+  test('动态页（other 分类）由全局词条覆盖：标题关键字与作者用户名', async () => {
     const page = await context.newPage();
     await page.goto('https://t.bilibili.com/');
     await expect
@@ -126,9 +126,8 @@ test.describe('首页特殊逻辑（轮播/排行榜）', () => {
     const extensionId = await getExtensionId(context);
     const toolsPage = await openToolsPage(context, extensionId);
     await seedConfig(toolsPage, {
-      version: 3,
+      version: 4,
       enable: true,
-      duration: { enable: false, minSeconds: 300 },
       words: [
         { value: '某排行榜UP', scopes: ['global'] },
         { value: '广告', scopes: ['global'] },

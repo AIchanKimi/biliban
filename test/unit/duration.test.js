@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { parseDuration, findDurationSeconds, clearDurationCache } from '../../src/content/engine/duration.js';
+import { parseDuration, findDurationSeconds, decideDurationEntries, clearDurationCache } from '../../src/content/engine/duration.js';
 
 describe('parseDuration', () => {
   test('mm:ss', () => {
@@ -86,5 +86,46 @@ describe('findDurationSeconds', () => {
   test('非法卡片安全返回 null', () => {
     expect(findDurationSeconds(null)).toBeNull();
     expect(findDurationSeconds({})).toBeNull();
+  });
+});
+
+describe('decideDurationEntries（时长词条判定）', () => {
+  test('短于：命中与不命中', () => {
+    const entries = [{ op: 'lt', seconds: 60, scopes: ['global'] }];
+    expect(decideDurationEntries(entries, 30, 'home')).toBe(true);
+    expect(decideDurationEntries(entries, 60, 'home')).toBe(false);
+    expect(decideDurationEntries(entries, 120, 'home')).toBe(false);
+  });
+
+  test('长于：命中与不命中', () => {
+    const entries = [{ op: 'gt', seconds: 3600, scopes: ['global'] }];
+    expect(decideDurationEntries(entries, 3601, 'home')).toBe(true);
+    expect(decideDurationEntries(entries, 3600, 'home')).toBe(false);
+    expect(decideDurationEntries(entries, 60, 'home')).toBe(false);
+  });
+
+  test('多词条任一命中即屏蔽', () => {
+    const entries = [
+      { op: 'lt', seconds: 30, scopes: ['global'] },
+      { op: 'gt', seconds: 600, scopes: ['home'] },
+    ];
+    expect(decideDurationEntries(entries, 700, 'home')).toBe(true);
+    expect(decideDurationEntries(entries, 100, 'home')).toBe(false);
+  });
+
+  test('作用域过滤', () => {
+    const entries = [{ op: 'lt', seconds: 60, scopes: ['search'] }];
+    expect(decideDurationEntries(entries, 30, 'search')).toBe(true);
+    expect(decideDurationEntries(entries, 30, 'home')).toBe(false);
+  });
+
+  test('卡片无时长（null）→ 不处理', () => {
+    const entries = [{ op: 'lt', seconds: 60, scopes: ['global'] }];
+    expect(decideDurationEntries(entries, null, 'home')).toBe(false);
+  });
+
+  test('空词条 → 不屏蔽', () => {
+    expect(decideDurationEntries([], 30, 'home')).toBe(false);
+    expect(decideDurationEntries(null, 30, 'home')).toBe(false);
   });
 });

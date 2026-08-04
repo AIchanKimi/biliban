@@ -1,9 +1,9 @@
 import { describe, test, expect } from 'bun:test';
 import { SCOPES, SCOPE_VALUES, isValidScope, scopeLabel, normalizeScopes, scopesApply } from '../../src/content/config/scopes.js';
 
-describe('scopes 枚举', () => {
-  test('六个固定分类，中文标签齐全', () => {
-    expect(SCOPE_VALUES).toEqual(['global', 'home', 'video', 'search', 'dynamics', 'space']);
+describe('scopes 枚举（v5.2 精简为 4 类）', () => {
+  test('四个固定分类，中文标签齐全', () => {
+    expect(SCOPE_VALUES).toEqual(['global', 'home', 'video', 'search']);
     expect(scopeLabel('search')).toBe('搜索');
     expect(scopeLabel('global')).toBe('全局');
   });
@@ -12,9 +12,10 @@ describe('scopes 枚举', () => {
     expect(Object.isFrozen(SCOPES)).toBe(true);
   });
 
-  test('isValidScope 拒绝未知值', () => {
+  test('isValidScope 拒绝已废弃分类', () => {
     expect(isValidScope('home')).toBe(true);
-    expect(isValidScope('live')).toBe(false);
+    expect(isValidScope('dynamics')).toBe(false);
+    expect(isValidScope('space')).toBe(false);
     expect(isValidScope(null)).toBe(false);
   });
 
@@ -25,16 +26,16 @@ describe('scopes 枚举', () => {
 
 describe('normalizeScopes', () => {
   test('过滤非法值并去重', () => {
-    expect(normalizeScopes(['search', 'live', 'search'])).toEqual(['search']);
+    expect(normalizeScopes(['search', 'dynamics', 'search'])).toEqual(['search']);
   });
 
-  test('空/全非法 → [global]', () => {
+  test('空/全非法/废弃分类 → [global]（旧数据自然迁移）', () => {
     expect(normalizeScopes([])).toEqual(['global']);
-    expect(normalizeScopes(['x'])).toEqual(['global']);
+    expect(normalizeScopes(['dynamics', 'space'])).toEqual(['global']);
     expect(normalizeScopes(null)).toEqual(['global']);
   });
 
-  test('global 与其他并存时保留（UI 约束单值，引擎宽容）', () => {
+  test('global 与其他并存时保留', () => {
     expect(normalizeScopes(['global', 'home'])).toEqual(['global', 'home']);
   });
 });
@@ -42,6 +43,7 @@ describe('normalizeScopes', () => {
 describe('scopesApply', () => {
   test('global 处处生效', () => {
     expect(scopesApply(['global'], 'search')).toBe(true);
+    expect(scopesApply(['global'], 'other')).toBe(true);
     expect(scopesApply(['global'], null)).toBe(false); // 无分类页面不跑引擎
   });
 

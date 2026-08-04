@@ -85,9 +85,17 @@ describe('scopes 映射表（按旧 indexOf 语义逐条钉死）', () => {
     expect(scopesOf('.video-item')).toEqual(['search']);
   });
 
-  test('动态与空间', () => {
-    expect(scopesOf('.bili-dyn-item')).toEqual(['dynamics']);
-    expect(scopesOf('.cube-list .small-item')).toEqual(['space']);
+  test('动态与空间规则 v5.2 归 [global]（分类精简，全局词条覆盖）', () => {
+    expect(scopesOf('.bili-dyn-item')).toEqual(['global']);
+    expect(scopesOf('.cube-list .small-item')).toEqual(['global']);
+  });
+
+  test('全部 scopes 只含 v5.2 的 4 个有效分类', () => {
+    for (const rule of BUILTIN_RULES) {
+      for (const scope of rule.scopes) {
+        expect(SCOPE_VALUES).toContain(scope);
+      }
+    }
   });
 
   test('.ebox（旧 url 仅 video|bangumi 路径）→ [video]', () => {

@@ -1,8 +1,8 @@
-// 存储迁移：v1（含油猴原脚本形状）/ v2 → v3（当前）。纯函数；备份与写回由 store.loadConfig 负责。
-// v1 丢弃项（不可逆，loadConfig 迁移前写 bilibili_config_v1_backup）：
-//   commentArray/whitelistArray、全部评论/直播/相薄/消息中心开关等。
-// v2 → v3：usernames 与 keywords 合并为 words（顺序保留、按 值+作用域 去重），无信息丢失之外的风险。
-import { CONFIG_VERSION, DEFAULT_MIN_SECONDS } from './defaults.js';
+// 存储迁移：v1（含油猴原脚本形状）/ v2 / v3 → v4（当前）。纯函数；备份与写回由 store.loadConfig 负责。
+// v1 丢弃项（不可逆，loadConfig 迁移前写版本化备份键）：commentArray/whitelistArray、各废弃开关。
+// v2 → v3 语义：usernames 与 keywords 合并为 words。
+// v3 → v4：全局 duration 开关转为一条时长词条 {op:'lt', seconds, scopes:['global']}（关闭则无）。
+import { CONFIG_VERSION } from './defaults.js';
 
 /**
  * @param {unknown} rawConfig
@@ -47,25 +47,46 @@ function dedupeEntries(entries) {
   return result;
 }
 
-/** v2 词条对象数组 → 词条（宽松强制，normalize 再精修） */
-function fromV2List(list) {
+/** v2/v3 词条对象数组 → 词条（宽松强制，normalize 再精修） */
+function fromObjectList(list) {
   const source = Array.isArray(list) ? list : [];
   return source.filter(entry => entry && typeof entry.value === 'string' && entry.value !== '');
 }
 
+/** v3 的全局 duration 开关 → 时长词条数组 */
+function durationFromV3(duration) {
+  if (!duration || typeof duration !== 'object' || !duration.enable) {
+    return [];
+  }
+  const min = Number(duration.minSeconds);
+  if (!Number.isFinite(min) || min <= 0) {
+    return [];
+  }
+  return [{ op: 'lt', seconds: min, scopes: ['global'] }];
+}
+
 /**
- * 任意旧形状 → v3（不修改入参）。
+ * 任意旧形状 → v4（不修改入参）。
  * @param {Record<string, unknown> | null | undefined} rawConfig
- * @returns {{ version: number, enable: boolean, duration: { enable: boolean, minSeconds: number }, words: Array<{ value: string, scopes: string[] }>, rules: unknown[] }}
+ * @returns {{ version: number, enable: boolean, words: Array<object>, durations: Array<object>, rules: unknown[] }}
  */
 export function migrateToLatest(rawConfig) {
   const source = rawConfig ?? {};
+  if (source.version === 3) {
+    return {
+      version: CONFIG_VERSION,
+      enable: source.enable ?? true,
+      words: dedupeEntries(fromObjectList(source.words)),
+      durations: durationFromV3(source.duration),
+      rules: Array.isArray(source.rules) ? source.rules : [],
+    };
+  }
   if (source.version === 2) {
     return {
       version: CONFIG_VERSION,
       enable: source.enable ?? true,
-      duration: source.duration ?? { enable: false, minSeconds: DEFAULT_MIN_SECONDS },
-      words: dedupeEntries([...fromV2List(source.usernames), ...fromV2List(source.keywords)]),
+      words: dedupeEntries([...fromObjectList(source.usernames), ...fromObjectList(source.keywords)]),
+      durations: durationFromV3(source.duration),
       rules: Array.isArray(source.rules) ? source.rules : [],
     };
   }
@@ -74,15 +95,14 @@ export function migrateToLatest(rawConfig) {
     ...(Array.isArray(source.keywordArray) ? source.keywordArray : []),
     ...(Array.isArray(source.regArray) ? source.regArray : []),
   ];
-  const words = dedupeEntries([
-    ...toGlobalEntries(source.usernameArray),
-    ...toGlobalEntries(keywordSource),
-  ]);
   return {
     version: CONFIG_VERSION,
     enable: source.functionEnable ?? true,
-    duration: { enable: false, minSeconds: DEFAULT_MIN_SECONDS },
-    words,
+    words: dedupeEntries([
+      ...toGlobalEntries(source.usernameArray),
+      ...toGlobalEntries(keywordSource),
+    ]),
+    durations: [],
     rules: [],
   };
 }

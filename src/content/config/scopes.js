@@ -1,4 +1,5 @@
-// 作用域（页面分类）枚举 v5：词条与规则统一用 scopes 数组表达生效范围。
+// 作用域（页面分类）枚举 v5.2：词条与规则统一用 scopes 数组表达生效范围。
+// 精简为 4 类（动态/空间等其余页面由引擎归为 'other'，仅全局词条生效）。
 // 分类由 engine/category.js 从当前 URL 推导；'global' 处处生效。
 
 export const SCOPES = Object.freeze([
@@ -6,8 +7,6 @@ export const SCOPES = Object.freeze([
   Object.freeze({ value: 'home', label: '首页' }),
   Object.freeze({ value: 'video', label: '视频页' }),
   Object.freeze({ value: 'search', label: '搜索' }),
-  Object.freeze({ value: 'dynamics', label: '动态' }),
-  Object.freeze({ value: 'space', label: '空间' }),
 ]);
 
 export const SCOPE_VALUES = Object.freeze(SCOPES.map(scope => scope.value));
@@ -25,6 +24,7 @@ export function scopeLabel(value) {
 
 /**
  * 归一化 scopes：过滤非法值、去重；空结果回落 ['global']。
+ * （旧数据中的 dynamics/space 等已废弃分类在此自然回落为 global。）
  * @param {unknown} scopes
  * @returns {string[]}
  */

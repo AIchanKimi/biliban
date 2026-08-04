@@ -3,9 +3,8 @@ import { launchContext, getExtensionId, openToolsPage, seedConfig } from './help
 import { setupBilibiliRoutes } from './helpers/bilibili-routes.js';
 
 const baseConfig = words => ({
-  version: 3,
+  version: 4,
   enable: true,
-  duration: { enable: false, minSeconds: 300 },
   words,
   rules: [],
 });
