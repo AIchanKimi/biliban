@@ -7,8 +7,21 @@ describe('stringToArray', () => {
     expect(stringToArray('/直播,预告/')).toEqual(['/直播,预告/']);
   });
 
+  test('v6.7 修复：多个正则逗号相连按逗号拆分（旧版整体误判为单个正则）', () => {
+    expect(stringToArray('/^陈莴笋哦$/,/^YY的奇妙冒险$/')).toEqual(['/^陈莴笋哦$/', '/^YY的奇妙冒险$/']);
+    expect(stringToArray('/a,b/,c')).toEqual(['/a,b/', 'c']);
+  });
+
+  test('正则内转义斜杠不提前闭合', () => {
+    expect(stringToArray('/a\\/b,c')).toEqual(['/a\\/b', 'c']);
+  });
+
   test('普通文本按逗号拆分', () => {
     expect(stringToArray('a,b,c')).toEqual(['a', 'b', 'c']);
+  });
+
+  test('普通文本含斜杠（非段首）不进入正则模式', () => {
+    expect(stringToArray('a/b,c')).toEqual(['a/b', 'c']);
   });
 
   test('不做 trim（对等原实现：" b" 原样保留）', () => {

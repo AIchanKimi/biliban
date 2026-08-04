@@ -187,6 +187,23 @@ test.describe('设置面板 v2（标签页式管理）', () => {
     await page.close();
   });
 
+  test('逗号分隔多个正则一次添加为多个绿色 chip（v6.7 修复：不再整体误判为单个正则）', async () => {
+    const page = await context.newPage();
+    await page.goto('https://www.bilibili.com/video/BV1fixture');
+    await openPanel(page);
+    await page.fill('#bilibiliConfig_wordInput_global', '/^陈莴笋哦$/,/^YY的奇妙冒险$/');
+    await page
+      .locator("xpath=//input[@id='bilibiliConfig_wordInput_global']/following::span[text()='添加'][1]")
+      .click();
+    const chips = page.locator('#bilibiliConfig_words_global .block_obj_child_text');
+    await expect(chips).toHaveCount(2);
+    // prepend 插入：后添加的视觉在前
+    await expect(chips.nth(0)).toHaveText('/^YY的奇妙冒险$/');
+    await expect(chips.nth(1)).toHaveText('/^陈莴笋哦$/');
+    await expect(chips.nth(0)).toHaveClass(/block_obj_child_green/);
+    await page.close();
+  });
+
   test('规则可编辑：点「编辑」改选择器 + 删除，保存后写回 rules', async () => {
     const page = await context.newPage();
     await page.goto('https://www.bilibili.com/video/BV1fixture');
