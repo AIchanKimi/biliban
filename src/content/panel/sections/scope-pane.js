@@ -27,8 +27,6 @@ import { createRulesGroup } from "./rules.js";
  */
 export function createScopePane(params) {
   const { scope, words, tempWords, durations, tempDurations, rules } = params;
-  // 「全局」面板管理屏蔽词 + 时长词条；规则归各具体分类
-  const rulesAllowed = scope !== "global";
 
   const pane = document.createElement("li");
   pane.className = SCOPE_PANE_CLASS;
@@ -52,34 +50,28 @@ export function createScopePane(params) {
   });
   const extraLis = [...durationsGroup.lis];
 
-  let rulesGroup = null;
-  if (rulesAllowed) {
-    // v6.3：规则区整体默认折叠，头部「规则」开关按需展开
-    rulesGroup = createRulesGroup({ scope, rules });
-    const rulesLi = document.createElement("li");
-    const rulesDiv = document.createElement("div");
-    rulesDiv.className = LIST_DIV_CLASS;
-    rulesDiv.id = FIELD_ID_PREFIX + "rules_" + scope;
-    rulesDiv.appendChild(rulesGroup.container);
-    rulesLi.appendChild(rulesDiv);
+  // v6.3：规则区整体默认折叠，头部「规则」开关按需展开
+  // v6.8：全局分类同样承载规则——全局规则在任意注入页面执行（如顶栏悬浮窗浮层）
+  const rulesGroup = createRulesGroup({ scope, rules });
+  const rulesLi = document.createElement("li");
+  const rulesDiv = document.createElement("div");
+  rulesDiv.className = LIST_DIV_CLASS;
+  rulesDiv.id = FIELD_ID_PREFIX + "rules_" + scope;
+  rulesDiv.appendChild(rulesGroup.container);
+  rulesLi.appendChild(rulesDiv);
 
-    extraLis.push(rulesLi);
-  }
+  extraLis.push(rulesLi);
 
   for (const li of [...wordsGroup.lis, ...extraLis]) {
     innerUl.appendChild(li);
   }
 
   function collect() {
-    const result = {
+    return {
       words: wordsGroup.collect(),
       durations: durationsGroup.collect(),
-      rules: [],
+      rules: rulesGroup.collect().rules,
     };
-    if (rulesGroup) {
-      result.rules = rulesGroup.collect().rules;
-    }
-    return result;
   }
 
   return { el: pane, collect };

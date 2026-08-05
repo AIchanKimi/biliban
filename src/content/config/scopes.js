@@ -1,6 +1,6 @@
 // 作用域（页面分类）枚举 v6.0：词条与规则统一用 scopes 数组表达生效范围。
-// 分类由 engine/category.js 从当前 URL 精确推导；不匹配的页面扩展不触发。
-// 'global' 覆盖全部已匹配分类；「全局」面板管理屏蔽词与时长词条，规则归各具体分类。
+// 分类由 engine/category.js 从当前 URL 精确推导；不匹配的页面仅全局作用域规则生效（v6.8）。
+// 'global' 覆盖全部已匹配分类（及未匹配页面的全局规则）；「全局」面板管理屏蔽词、时长词条与规则。
 
 export const SCOPES = Object.freeze([
   Object.freeze({ value: "global", label: "全局" }),

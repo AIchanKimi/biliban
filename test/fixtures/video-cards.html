@@ -57,6 +57,22 @@
         <span class="bili-video-card__stats__duration">12:05</span>
       </div>
     </div>
+    <!-- v6.8 浮层（模拟顶栏悬浮推荐窗）：容器专属 class，仅全局作用域规则命中；
+         不使用 .bili-video-card，与页面 feed 卡结构隔离 -->
+    <div class="bili-popup-recommend">
+      <div class="popup-card" data-test="overlay-card-ad">
+        <div class="popup-title">浮窗广告标题</div>
+        <div class="popup-author">正常UP</div>
+      </div>
+      <div class="popup-card" data-test="overlay-card-by-author">
+        <div class="popup-title">浮窗正常标题</div>
+        <div class="popup-author">广告UP</div>
+      </div>
+      <div class="popup-card" data-test="overlay-card-clean">
+        <div class="popup-title">浮窗正常标题二</div>
+        <div class="popup-author">正常UP二</div>
+      </div>
+    </div>
     <div class="custom-junk" data-test="custom-junk">垃圾横幅</div>
     <div class="custom-match-card" data-test="custom-match">
       <span class="custom-title">匹配词标题</span>

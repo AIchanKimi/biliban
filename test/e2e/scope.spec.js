@@ -20,7 +20,18 @@ const V6_CONFIG = {
     { value: "播放专属词", scopes: ["play"] },
   ],
   durations: [],
-  rules: [],
+  rules: [
+    // v6.8：全局作用域规则——浮层（顶栏悬浮窗模拟）在任意注入页面执行
+    {
+      id: "custom-popup",
+      selector: ".bili-popup-recommend .popup-card",
+      scopes: ["global"],
+      mode: "match",
+      textSelectors: [".popup-title", ".popup-author"],
+      durationSelector: "",
+      enabled: true,
+    },
+  ],
 };
 
 test.describe("作用域与内置规则（v6.0 分类）", () => {
@@ -169,10 +180,59 @@ test.describe("作用域与内置规则（v6.0 分类）", () => {
     await page.goto("https://www.bilibili.com/");
     await page.waitForSelector('[data-test="card-by-keyword"]');
     await page.waitForTimeout(800);
-    // 同一份 fixture，但首页 URL 未匹配任何分类 → 不屏蔽
+    // 同一份 fixture，但首页 URL 未匹配任何分类 → feed 卡不屏蔽（全局规则仅作用于浮层容器）
     await expect(page.locator('[data-test="card-by-keyword"]')).not.toHaveClass(
       new RegExp(NONE),
     );
+    await page.close();
+  });
+
+  test("v6.8 全局规则：未匹配页面浮层卡按全局词屏蔽，feed 不受影响", async () => {
+    const page = await context.newPage();
+    await page.goto("https://www.bilibili.com/");
+    // 标题命中全局词「广告」
+    await expect
+      .poll(() =>
+        page
+          .locator('[data-test="overlay-card-ad"]')
+          .evaluate((el) => el.classList.contains("block_obj_none")),
+      )
+      .toBe(true);
+    // UP 主字段命中全局词「广告UP」
+    await expect
+      .poll(() =>
+        page
+          .locator('[data-test="overlay-card-by-author"]')
+          .evaluate((el) => el.classList.contains("block_obj_none")),
+      )
+      .toBe(true);
+    // 干净浮层卡与页面 feed 卡均不受影响
+    await page.waitForSelector('[data-test="overlay-card-clean"]');
+    await page.waitForTimeout(500);
+    await expect(
+      page.locator('[data-test="overlay-card-clean"]'),
+    ).not.toHaveClass(new RegExp(NONE));
+    await expect(page.locator('[data-test="card-by-keyword"]')).not.toHaveClass(
+      new RegExp(NONE),
+    );
+    await page.close();
+  });
+
+  test("v6.8 全局规则：已匹配页面浮层卡同样屏蔽", async () => {
+    const page = await context.newPage();
+    await page.goto("https://www.bilibili.com/video/BV1fixture");
+    await expect
+      .poll(() =>
+        page
+          .locator('[data-test="overlay-card-ad"]')
+          .evaluate((el) => el.classList.contains("block_obj_none")),
+      )
+      .toBe(true);
+    await page.waitForSelector('[data-test="overlay-card-clean"]');
+    await page.waitForTimeout(300);
+    await expect(
+      page.locator('[data-test="overlay-card-clean"]'),
+    ).not.toHaveClass(new RegExp(NONE));
     await page.close();
   });
 });

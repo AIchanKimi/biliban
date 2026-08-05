@@ -112,9 +112,12 @@ export function createPanel(deps) {
     const tabBarLi = document.createElement("li");
     const tabBar = document.createElement("div");
     tabBar.className = TAB_BAR_CLASS;
-    // 当前页面匹配的分类：global 覆盖全部已匹配分类，与页面自身分类一并标记；未匹配页面不标记
+    // 当前页面匹配的分类：global 覆盖全部已匹配分类，与页面自身分类一并标记；
+    // 未匹配页面仅 global 生效（v6.8 全局规则，如顶栏悬浮窗）
     const pageCategory = categoryFor(location.href);
-    const currentScopes = new Set(pageCategory ? ["global", pageCategory] : []);
+    const currentScopes = new Set(
+      pageCategory ? ["global", pageCategory] : ["global"],
+    );
     tabButtons = SCOPES.map((scope) => {
       const tab = document.createElement("span");
       tab.id = FIELD_ID_PREFIX + "tab_" + scope.value;
@@ -261,7 +264,9 @@ export function createPanel(deps) {
   function switchTab(scope) {
     activeScope = scope;
     const pageCategory = categoryFor(location.href);
-    const currentScopes = new Set(pageCategory ? ["global", pageCategory] : []);
+    const currentScopes = new Set(
+      pageCategory ? ["global", pageCategory] : ["global"],
+    );
     for (const { scope: s, tab } of tabButtons) {
       tab.className = tabClassName(s, s === scope, currentScopes.has(s));
     }

@@ -3,7 +3,7 @@
 //   空间: space.bilibili.com/{uid}/upload/video
 //   播放: www.bilibili.com/video/*、/bangumi/*、/list/ml*、/list/watchlater*
 //   收藏: www.bilibili.com/watchlater/*、space.bilibili.com/{uid}/favlist/*
-// 其他页面（首页 feed、频道、动态等）返回 null → 引擎不触发。
+// 其他页面（首页 feed、频道、动态等）返回 null → 仅全局作用域规则生效（v6.8，如顶栏悬浮窗）。
 // hideEvent 每次执行实时读取 location.href（SPA 友好）。
 
 /**

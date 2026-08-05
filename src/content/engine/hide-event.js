@@ -1,7 +1,9 @@
-// hideEvent —— 屏蔽执行总编排（v6.1 纯文字匹配）。
+// hideEvent —— 屏蔽执行总编排（v6.1 纯文字匹配，v6.8 全局规则）。
 // 实时页面分类 → 规则统一循环（内置已在存储层并入 config.rules）：
 //   mode:'hide'  直接隐藏（禁用时解除）；
 //   mode:'match' 文字选择器提取文本 → hideHandler（屏蔽词 + 时长词条）。
+// 未匹配页面回落 global 上下文：全局作用域规则（如顶栏悬浮窗）处处执行，
+// 词条判定按全局词条；页面专属规则在未匹配页面跳过（不执行选择器）。
 // 命中统计（rule-stats）按轮覆盖写：每条规则记录本轮「匹配到几个 / 屏蔽了几个」，
 // 面板徽标因此反映当前页面状态，稳定不累加。
 import { categoryFor } from "./category.js";
@@ -22,15 +24,13 @@ export function createHideEvent(deps) {
 
   return function hideEvent() {
     const config = getConfig();
-    const category = categoryFor(location.href);
-    if (!category) {
-      return;
-    }
+    // 未匹配页面回落 global：全局规则仍可执行（v6.8）
+    const effectiveCategory = categoryFor(location.href) ?? "global";
     // 内置规则优先取用户持久化版本（面板编辑/删除后写回）；从未编辑过则用代码默认
     // v6.1：内置规则已在存储层并入 config.rules（normalize/migrate 播种与合并）
     for (const rule of config.rules ?? []) {
       const enabled = rule.enabled !== false;
-      if (!scopesApply(rule.scopes, category)) {
+      if (!scopesApply(rule.scopes, effectiveCategory)) {
         continue;
       }
       let all;
@@ -70,6 +70,7 @@ export function createHideEvent(deps) {
               texts,
               rule.method ?? 0,
               rule.durationSelector ?? "",
+              effectiveCategory,
             )
           ) {
             hiddenCount++;

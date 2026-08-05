@@ -62,7 +62,15 @@ describe("scopesApply", () => {
   test("global 覆盖全部已匹配分类", () => {
     expect(scopesApply(["global"], "search")).toBe(true);
     expect(scopesApply(["global"], "fav")).toBe(true);
-    expect(scopesApply(["global"], null)).toBe(false); // 未匹配页面不触发
+    // 函数本身对 null 返回 false；v6.8 起引擎未匹配页面改传 'global' 上下文而非 null
+    expect(scopesApply(["global"], null)).toBe(false);
+  });
+
+  test("v6.8：'global' 作为上下文——全局规则/词条处处生效，页面专属不扩散", () => {
+    expect(scopesApply(["global"], "global")).toBe(true);
+    expect(scopesApply(["global", "play"], "global")).toBe(true);
+    expect(scopesApply(["play"], "global")).toBe(false);
+    expect(scopesApply(["search"], "global")).toBe(false);
   });
 
   test("分类精确匹配", () => {
