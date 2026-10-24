@@ -8,15 +8,15 @@
  * @returns {() => void} scheduleHideEvent
  */
 export function createScheduler(hideEvent) {
-  let scheduled = false;
+  let scheduled = false
   return function scheduleHideEvent() {
     if (scheduled) {
-      return;
+      return
     }
-    scheduled = true;
+    scheduled = true
     requestAnimationFrame(() => {
-      scheduled = false;
-      hideEvent();
-    });
-  };
+      scheduled = false
+      hideEvent()
+    })
+  }
 }

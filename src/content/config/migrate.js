@@ -1,33 +1,20 @@
-// 存储迁移：v1（含油猴原脚本形状）/ v2 / v3 / v4 → v5（当前）。纯函数；备份与写回由 store.loadConfig 负责。
-// v1 丢弃项（不可逆，loadConfig 迁移前写版本化备份键）：commentArray/whitelistArray、各废弃开关。
+import { BUILTIN_RULES } from '../rules/builtin-rules.js'
+// 扩展配置迁移：v2 / v3 / v4 → v5。备份与写回由 store.loadConfig 负责。
 // v2 → v3 语义：usernames 与 keywords 合并为 words。
 // v3 → v4：全局 duration 开关转为一条时长词条 {op:'lt', seconds, scopes:['global']}（关闭则无）。
 // v4 → v5：取消 builtinRules 双轨——内置规则并入 rules，与自定义规则完全同构。
-import { CONFIG_VERSION, BUILTIN_RULES_VERSION } from "./defaults.js";
-import { BUILTIN_RULES } from "../rules/builtin-rules.js";
+import {
+  BUILTIN_RULES_VERSION,
+  CONFIG_VERSION,
+  DEFAULT_CONFIG,
+} from './defaults.js'
 
 /**
  * @param {unknown} rawConfig
  * @returns {boolean} 已是当前版本形状
  */
 export function isCurrentVersion(rawConfig) {
-  return Boolean(rawConfig) && rawConfig.version === CONFIG_VERSION;
-}
-
-/**
- * 字符串数组 → 全局作用域词条（过滤非字符串/空串）。
- * @param {unknown} list
- * @returns {Array<{ value: string, scopes: string[] }>}
- */
-function toGlobalEntries(list) {
-  const source = Array.isArray(list) ? list : [];
-  const entries = [];
-  for (const item of source) {
-    if (typeof item === "string" && item !== "") {
-      entries.push({ value: item, scopes: ["global"] });
-    }
-  }
-  return entries;
+  return Boolean(rawConfig) && rawConfig.version === CONFIG_VERSION
 }
 
 /**
@@ -36,37 +23,50 @@ function toGlobalEntries(list) {
  * @returns {Array<{ value: unknown, scopes: unknown }>}
  */
 function dedupeEntries(entries) {
-  const seen = new Set();
-  const result = [];
+  const seen = new Set()
+  const result = []
   for (const entry of entries) {
-    const scopes = Array.isArray(entry.scopes) ? entry.scopes : ["global"];
-    const key = JSON.stringify([entry.value, [...scopes].sort()]);
+    const scopes = Array.isArray(entry.scopes)
+      ? entry.scopes
+      : ['global']
+    const key = JSON.stringify([
+      entry.value,
+      [...scopes].sort(),
+    ])
     if (!seen.has(key)) {
-      seen.add(key);
-      result.push({ value: entry.value, scopes });
+      seen.add(key)
+      result.push({ value: entry.value, scopes })
     }
   }
-  return result;
+  return result
 }
 
 /** v2/v3 词条对象数组 → 词条（宽松强制，normalize 再精修） */
 function fromObjectList(list) {
-  const source = Array.isArray(list) ? list : [];
+  const source = Array.isArray(list)
+    ? list
+    : []
   return source.filter(
-    (entry) => entry && typeof entry.value === "string" && entry.value !== "",
-  );
+    entry => entry && typeof entry.value === 'string' && entry.value !== '',
+  )
 }
 
 /** v3 的全局 duration 开关 → 时长词条数组 */
 function durationFromV3(duration) {
-  if (!duration || typeof duration !== "object" || !duration.enable) {
-    return [];
+  if (!duration || typeof duration !== 'object' || !duration.enable) {
+    return []
   }
-  const min = Number(duration.minSeconds);
+  const min = Number(duration.minSeconds)
   if (!Number.isFinite(min) || min <= 0) {
-    return [];
+    return []
   }
-  return [{ op: "lt", seconds: min, scopes: ["global"] }];
+  return [
+    {
+      op: 'lt',
+      seconds: min,
+      scopes: ['global'],
+    },
+  ]
 }
 
 /**
@@ -87,49 +87,82 @@ export function mergeRulesWithBuiltins(
 ) {
   const builtinBase = Array.isArray(storedBuiltins)
     ? [...storedBuiltins]
-    : [...BUILTIN_RULES];
+    : [...BUILTIN_RULES]
   if (storedBuiltinVersion !== BUILTIN_RULES_VERSION) {
     for (const rule of BUILTIN_RULES) {
-      if (!builtinBase.some((item) => item && item.id === rule.id)) {
-        builtinBase.push(rule);
+      if (!builtinBase.some(item => item && item.id === rule.id)) {
+        builtinBase.push(rule)
       }
     }
   }
   const merged = [
     ...builtinBase,
-    ...(Array.isArray(customRules) ? customRules : []),
-  ];
-  const seen = new Set();
-  const result = [];
+    ...(Array.isArray(customRules)
+      ? customRules
+      : []),
+  ]
+  const seen = new Set()
+  const result = []
   for (const rule of merged) {
     if (!rule || !rule.id || seen.has(rule.id)) {
-      continue;
+      continue
     }
-    seen.add(rule.id);
-    result.push(rule);
+    seen.add(rule.id)
+    result.push(rule)
   }
-  return result;
+  return result
 }
 
 /**
- * 任意旧形状 → v5（不修改入参）。
+ * 空存储时的种子配置：DEFAULT_CONFIG 的开关/词条/时长 + 代码内置规则。
+ * 只用于首次载入（存储中尚无配置）；已有配置与用户删除过的词条不会被重新灌入。
+ * 种子里的规则优先于同 id 的内置规则（便于把调好的选择器作为默认值），
+ * 仅补入种子中不存在的内置规则，保证扩展升级后新增内置规则仍会到位。
+ * @param {Readonly<{ enable?: boolean, words?: unknown, durations?: unknown, rules?: unknown }>} [defaults]
+ * @returns {{ version: number, enable: boolean, words: Array<object>, durations: Array<object>, rules: Array<object> }}
+ */
+export function buildSeedConfig(defaults = DEFAULT_CONFIG) {
+  const seedRules = Array.isArray(defaults.rules)
+    ? defaults.rules.filter(rule => rule && rule.id)
+    : []
+  const seedIds = new Set(seedRules.map(rule => rule.id))
+  return {
+    version: CONFIG_VERSION,
+    enable: defaults.enable ?? true,
+    words: Array.isArray(defaults.words)
+      ? [...defaults.words]
+      : [],
+    durations: Array.isArray(defaults.durations)
+      ? [...defaults.durations]
+      : [],
+    rules: [
+      ...seedRules,
+      ...BUILTIN_RULES.filter(rule => !seedIds.has(rule.id)),
+    ],
+  }
+}
+
+/**
+ * 扩展旧版本配置 → v5（不修改入参）；不接受无版本或不支持的格式。
  * @param {Record<string, unknown> | null | undefined} rawConfig
  * @returns {{ version: number, enable: boolean, words: Array<object>, durations: Array<object>, rules: Array<object> }}
  */
 export function migrateToLatest(rawConfig) {
-  const source = rawConfig ?? {};
+  const source = rawConfig ?? {}
   if (source.version === 4) {
     return {
       version: CONFIG_VERSION,
       enable: source.enable ?? true,
       words: dedupeEntries(fromObjectList(source.words)),
-      durations: Array.isArray(source.durations) ? source.durations : [],
+      durations: Array.isArray(source.durations)
+        ? source.durations
+        : [],
       rules: mergeRulesWithBuiltins(
         source.rules,
         source.builtinRules,
         source.builtinVersion,
       ),
-    };
+    }
   }
   if (source.version === 3) {
     return {
@@ -138,7 +171,7 @@ export function migrateToLatest(rawConfig) {
       words: dedupeEntries(fromObjectList(source.words)),
       durations: durationFromV3(source.duration),
       rules: mergeRulesWithBuiltins(source.rules, undefined, undefined),
-    };
+    }
   }
   if (source.version === 2) {
     return {
@@ -150,21 +183,7 @@ export function migrateToLatest(rawConfig) {
       ]),
       durations: durationFromV3(source.duration),
       rules: mergeRulesWithBuiltins(source.rules, undefined, undefined),
-    };
+    }
   }
-  // v1（含 Tampermonkey 原形状）
-  const keywordSource = [
-    ...(Array.isArray(source.keywordArray) ? source.keywordArray : []),
-    ...(Array.isArray(source.regArray) ? source.regArray : []),
-  ];
-  return {
-    version: CONFIG_VERSION,
-    enable: source.functionEnable ?? true,
-    words: dedupeEntries([
-      ...toGlobalEntries(source.usernameArray),
-      ...toGlobalEntries(keywordSource),
-    ]),
-    durations: [],
-    rules: mergeRulesWithBuiltins([], undefined, undefined),
-  };
+  throw new Error(`不支持的配置版本：${String(source.version)}`)
 }

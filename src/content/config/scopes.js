@@ -3,31 +3,31 @@
 // 'global' 覆盖全部已匹配分类（及未匹配页面的全局规则）；「全局」面板管理屏蔽词、时长词条与规则。
 
 export const SCOPES = Object.freeze([
-  Object.freeze({ value: "global", label: "全局" }),
-  Object.freeze({ value: "search", label: "搜索" }),
-  Object.freeze({ value: "space", label: "空间" }),
-  Object.freeze({ value: "play", label: "播放" }),
-  Object.freeze({ value: "fav", label: "收藏" }),
-]);
+  Object.freeze({ value: 'global', label: '全局' }),
+  Object.freeze({ value: 'search', label: '搜索' }),
+  Object.freeze({ value: 'space', label: '空间' }),
+  Object.freeze({ value: 'play', label: '播放' }),
+  Object.freeze({ value: 'fav', label: '收藏' }),
+])
 
-export const SCOPE_VALUES = Object.freeze(SCOPES.map((scope) => scope.value));
+export const SCOPE_VALUES = Object.freeze(SCOPES.map(scope => scope.value))
 
 // 旧版本分类迁移映射（v6 删除了 home/video/dynamics 分类）
 const LEGACY_SCOPE_MAP = Object.freeze({
-  home: "play",
-  video: "play",
-  dynamics: "global",
-});
+  home: 'play',
+  video: 'play',
+  dynamics: 'global',
+})
 
 /** @param {unknown} value @returns {boolean} */
 export function isValidScope(value) {
-  return SCOPE_VALUES.includes(value);
+  return SCOPE_VALUES.includes(value)
 }
 
 /** @param {unknown} value @returns {string} 未知值返回空串 */
 export function scopeLabel(value) {
-  const scope = SCOPES.find((item) => item.value === value);
-  return scope ? scope.label : "";
+  const scope = SCOPES.find(item => item.value === value)
+  return scope ? scope.label : ''
 }
 
 /**
@@ -36,15 +36,19 @@ export function scopeLabel(value) {
  * @returns {string[]}
  */
 export function normalizeScopes(scopes) {
-  const source = Array.isArray(scopes) ? scopes : [];
-  const result = [];
+  const source = Array.isArray(scopes)
+    ? scopes
+    : []
+  const result = []
   for (const raw of source) {
-    const value = LEGACY_SCOPE_MAP[raw] ?? raw;
+    const value = LEGACY_SCOPE_MAP[raw] ?? raw
     if (isValidScope(value) && !result.includes(value)) {
-      result.push(value);
+      result.push(value)
     }
   }
-  return result.length > 0 ? result : ["global"];
+  return result.length > 0
+    ? result
+    : ['global']
 }
 
 /**
@@ -55,7 +59,7 @@ export function normalizeScopes(scopes) {
  */
 export function scopesApply(scopes, category) {
   if (!category) {
-    return false;
+    return false
   }
-  return scopes.includes("global") || scopes.includes(category);
+  return scopes.includes('global') || scopes.includes(category)
 }

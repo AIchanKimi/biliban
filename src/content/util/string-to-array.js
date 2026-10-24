@@ -3,52 +3,53 @@
 //     （对等 4.6.3 修复：正则内逗号；v6.7 修复：多个正则逗号相连被整体误判为单个正则）
 //   - 其余按半角逗号拆分，不 trim（"a, b" → ["a", " b"]），去重保留首次出现
 
-const FLAG_RE = /[a-z]/i;
+const FLAG_RE = /[a-z]/i
 
 /**
  * @param {string} textString
  * @returns {string[]}
  */
 export function stringToArray(textString) {
-  const text = String(textString ?? "");
-  const parts = [];
-  let current = "";
-  let inRegex = false;
+  const text = String(textString ?? '')
+  const parts = []
+  let current = ''
+  let inRegex = false
   for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
+    const ch = text[i]
     if (inRegex) {
-      current += ch;
-      if (ch === "\\") {
+      current += ch
+      if (ch === '\\') {
         if (i + 1 < text.length) {
-          current += text[++i];
-        }
-      } else if (ch === "/") {
-        inRegex = false;
-        while (i + 1 < text.length && FLAG_RE.test(text[i + 1])) {
-          current += text[++i]; // 闭合 / 后的修饰符（i/g/m…）
+          current += text[++i]
         }
       }
-      continue;
+      else if (ch === '/') {
+        inRegex = false
+        while (i + 1 < text.length && FLAG_RE.test(text[i + 1])) {
+          current += text[++i] // 闭合 / 后的修饰符（i/g/m…）
+        }
+      }
+      continue
     }
-    if (ch === "/" && current.trim() === "") {
-      inRegex = true;
-      current += ch;
-      continue;
+    if (ch === '/' && current.trim() === '') {
+      inRegex = true
+      current += ch
+      continue
     }
-    if (ch === ",") {
-      parts.push(current);
-      current = "";
-      continue;
+    if (ch === ',') {
+      parts.push(current)
+      current = ''
+      continue
     }
-    current += ch;
+    current += ch
   }
-  parts.push(current);
+  parts.push(current)
 
-  const result = [];
+  const result = []
   for (const item of parts) {
     if (!result.includes(item)) {
-      result.push(item);
+      result.push(item)
     }
   }
-  return result;
+  return result
 }

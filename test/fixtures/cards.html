@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>通用卡片测试</title>
+<!-- 虚构结构，只验证任意规则驱动的匹配和隐藏；不模拟 B 站布局。 -->
+<body>
+  <article class="card" id="by-title"><span class="title">广告标题</span><span class="author">作者甲</span><span class="duration">0:30</span></article>
+  <article class="card" id="by-author"><span class="title">普通标题</span><span class="author">目标作者</span><span class="duration">12:05</span></article>
+  <article class="card" id="clean"><span class="title">普通视频</span><span class="author">作者乙</span></article>
+  <article class="card" id="name-in-title"><span class="title">目标作者推荐合集</span><span class="author">别人</span></article>
+  <aside class="banner" id="banner">直接隐藏区域</aside>
+  <section class="timed" id="explicit-duration"><div class="time">0:45<span>×</span></div></section>
+  <section class="timed-fallback" id="fallback-duration"><div>2:00</div></section>
+  <section class="timed-missing" id="missing-duration"><div>播放量 123万</div></section>
+</body>
+</html>

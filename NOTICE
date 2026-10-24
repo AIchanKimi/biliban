@@ -1,0 +1,21 @@
+Biliban
+
+This project is a modified browser-extension version of:
+  哔哩哔哩 - 屏蔽指定内容, v4.8.0, by pana
+  https://greasyfork.org/zh-CN/scripts/397669
+  License: GNU General Public License v3.0 or later
+
+The panel interaction was adapted from Block_Obj by pana:
+  https://greasyfork.org/scripts/407543-block-obj
+  License: GNU General Public License v3.0 or later
+
+Original attribution: © pana.
+Modifications: © 2026 AIchanKimi and contributors.
+Modification notice dated 2026-10-24: refactored as a Manifest V3 extension;
+changed filtering, rule storage, scope handling and the configuration panel;
+removed the legacy userscript and its unused features.
+
+The complete modified work is distributed under GPL-3.0-or-later.
+See LICENSE for the full terms, including the absence of warranty.
+The source corresponding to a release, including development and packaging
+scripts, must remain available alongside that release.

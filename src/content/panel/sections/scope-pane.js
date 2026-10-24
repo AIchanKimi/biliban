@@ -2,14 +2,14 @@
 // 作用域由标签页承载，组内不再出现作用域选择。
 import {
   FIELD_ID_PREFIX,
+  LI_WORDS_CLASS,
+  LIST_DIV_CLASS,
   SCOPE_PANE_CLASS,
   UL_NODE_CLASS,
-  LIST_DIV_CLASS,
-  LI_WORDS_CLASS,
-} from "../../constants.js";
-import { createEntriesGroup } from "./entries.js";
-import { createDurationsGroup } from "./durations.js";
-import { createRulesGroup } from "./rules.js";
+} from '../../constants.js'
+import { createDurationsGroup } from './durations.js'
+import { createEntriesGroup } from './entries.js'
+import { createRulesGroup } from './rules.js'
 
 /**
  * @param {{
@@ -26,44 +26,47 @@ import { createRulesGroup } from "./rules.js";
  * }}
  */
 export function createScopePane(params) {
-  const { scope, words, tempWords, durations, tempDurations, rules } = params;
+  const { scope, words, tempWords, durations, tempDurations, rules } = params
 
-  const pane = document.createElement("li");
-  pane.className = SCOPE_PANE_CLASS;
-  pane.id = FIELD_ID_PREFIX + "pane_" + scope;
-  pane.dataset.scope = scope;
-  const innerUl = document.createElement("ul");
-  innerUl.className = UL_NODE_CLASS;
-  pane.appendChild(innerUl);
+  const pane = document.createElement('li')
+  pane.className = SCOPE_PANE_CLASS
+  pane.id = `${FIELD_ID_PREFIX}pane_${scope}`
+  pane.dataset.scope = scope
+  const innerUl = document.createElement('ul')
+  innerUl.className = UL_NODE_CLASS
+  pane.appendChild(innerUl)
 
   const wordsGroup = createEntriesGroup({
     scope,
     liClassname: LI_WORDS_CLASS,
     entries: words,
     tempEntries: tempWords,
-  });
+  })
 
   const durationsGroup = createDurationsGroup({
     scope,
     entries: durations,
     tempEntries: tempDurations,
-  });
-  const extraLis = [...durationsGroup.lis];
+  })
+  const extraLis = [...durationsGroup.lis]
 
   // v6.3：规则区整体默认折叠，头部「规则」开关按需展开
   // v6.8：全局分类同样承载规则——全局规则在任意注入页面执行（如顶栏悬浮窗浮层）
-  const rulesGroup = createRulesGroup({ scope, rules });
-  const rulesLi = document.createElement("li");
-  const rulesDiv = document.createElement("div");
-  rulesDiv.className = LIST_DIV_CLASS;
-  rulesDiv.id = FIELD_ID_PREFIX + "rules_" + scope;
-  rulesDiv.appendChild(rulesGroup.container);
-  rulesLi.appendChild(rulesDiv);
+  const rulesGroup = createRulesGroup({ scope, rules })
+  const rulesLi = document.createElement('li')
+  const rulesDiv = document.createElement('div')
+  rulesDiv.className = LIST_DIV_CLASS
+  rulesDiv.id = `${FIELD_ID_PREFIX}rules_${scope}`
+  rulesDiv.appendChild(rulesGroup.container)
+  rulesLi.appendChild(rulesDiv)
 
-  extraLis.push(rulesLi);
+  extraLis.push(rulesLi)
 
-  for (const li of [...wordsGroup.lis, ...extraLis]) {
-    innerUl.appendChild(li);
+  for (const li of [
+    ...wordsGroup.lis,
+    ...extraLis,
+  ]) {
+    innerUl.appendChild(li)
   }
 
   function collect() {
@@ -71,8 +74,8 @@ export function createScopePane(params) {
       words: wordsGroup.collect(),
       durations: durationsGroup.collect(),
       rules: rulesGroup.collect().rules,
-    };
+    }
   }
 
-  return { el: pane, collect };
+  return { el: pane, collect }
 }

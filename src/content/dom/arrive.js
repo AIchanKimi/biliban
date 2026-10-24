@@ -8,18 +8,18 @@
 export function onBodyReady() {
   return new Promise((resolve) => {
     if (document.body) {
-      resolve(document.body);
-      return;
+      resolve(document.body)
+      return
     }
     const observer = new MutationObserver(() => {
       if (document.body) {
-        observer.disconnect();
-        resolve(document.body);
+        observer.disconnect()
+        resolve(document.body)
       }
-    });
+    })
     observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
-    });
-  });
+    })
+  })
 }
